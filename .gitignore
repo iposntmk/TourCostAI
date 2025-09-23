@@ -1,0 +1,18 @@
+# Node
+node_modules/
+dist/
+.vite/
+coverage/
+*.log
+
+# Env / secrets
+.env
+.env.*.local
+*.env
+client/.env
+api key
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/
