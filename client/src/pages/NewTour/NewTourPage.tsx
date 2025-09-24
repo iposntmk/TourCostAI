@@ -507,7 +507,7 @@ export const NewTourPage = () => {
   const canConfirm = matches.length > 0 && !processing;
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper new-tour-page">
       <PageHeader
         title="Tiếp nhận hình ảnh bằng AI"
         description="Tải ảnh chương trình tour và để Gemini trích xuất, chuẩn hóa và xác thực dữ liệu dựa trên các danh mục Dữ liệu chuẩn."
