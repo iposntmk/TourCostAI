@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FiDatabase, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiBriefcase, FiDollarSign, FiList } from "react-icons/fi";
 import { PageHeader } from "../../components/common/PageHeader";
 import { TabMenu } from "../../components/common/TabMenu";
+import { SyncStatus } from "../../components/common/SyncStatus";
 import { useMasterData } from "../../contexts/MasterDataContext";
 import type { Guide, Partner, PerDiemRate, Service } from "../../types";
 import { formatCurrency } from "../../utils/format";
@@ -1002,9 +1003,12 @@ export const MasterDataPage = () => {
         title="Danh mục Dữ liệu chuẩn"
         description="Duy trì nguồn dữ liệu chuẩn cho tất cả hướng dẫn viên, dịch vụ, đối tác và bảng cấu hình."
         actions={
-          <button className="ghost-button" onClick={resetMasterData}>
-            <FiRefreshCw /> Đặt lại mặc định
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <SyncStatus />
+            <button className="ghost-button" onClick={resetMasterData}>
+              <FiRefreshCw /> Đặt lại mặc định
+            </button>
+          </div>
         }
       />
       

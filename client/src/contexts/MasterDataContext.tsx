@@ -5,7 +5,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { defaultMasterData, MASTER_DATA_STORAGE_KEY } from "../data/masterData";
+import { defaultMasterData } from "../data/masterData";
+import { hybridStorage, type SyncStatus } from "../services/hybridStorage";
 import { generateId } from "../utils/ids";
 import type {
   Guide,
@@ -17,6 +18,8 @@ import type {
 
 export interface MasterDataContextValue {
   masterData: MasterData;
+  syncStatus: SyncStatus;
+  isLoading: boolean;
   addService: (service: Omit<Service, "id">) => void;
   updateService: (id: string, updates: Partial<Service>) => void;
   removeService: (id: string) => void;
@@ -34,40 +37,21 @@ export interface MasterDataContextValue {
   resetMasterData: () => void;
   findServiceByName: (query: string) => Service | undefined;
   findGuideByName: (query: string) => Guide | undefined;
+  forceSync: () => Promise<void>;
 }
 
 const MasterDataContext = createContext<MasterDataContextValue | undefined>(
   undefined,
 );
 
-const loadMasterData = (): MasterData => {
-  if (typeof window === "undefined") {
-    return defaultMasterData;
-  }
-  try {
-    const raw = window.localStorage.getItem(MASTER_DATA_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as MasterData;
-      if (parsed?.services && parsed?.guides) {
-        return parsed;
-      }
-    }
-  } catch (error) {
-    console.warn("Failed to read master data from storage", error);
-  }
-  return defaultMasterData;
-};
-
-const saveMasterData = (data: MasterData) => {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      MASTER_DATA_STORAGE_KEY,
-      JSON.stringify(data),
-    );
-  } catch (error) {
-    console.warn("Failed to persist master data", error);
-  }
+// Helper function to update master data and sync
+const updateMasterData = async (
+  currentData: MasterData,
+  updater: (data: MasterData) => MasterData
+): Promise<MasterData> => {
+  const newData = updater(currentData);
+  await hybridStorage.saveMasterData(newData);
+  return newData;
 };
 
 const normalizeText = (value: string) =>
@@ -78,108 +62,155 @@ const normalizeText = (value: string) =>
     .trim();
 
 export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
-  const [masterData, setMasterData] = useState<MasterData>(() => loadMasterData());
+  const [masterData, setMasterData] = useState<MasterData>(defaultMasterData);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    isOnline: navigator.onLine,
+    lastSync: null,
+    pendingChanges: false,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load initial data
   useEffect(() => {
-    saveMasterData(masterData);
-  }, [masterData]);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const result = await hybridStorage.loadMasterData();
+        if (result.data) {
+          setMasterData(result.data);
+        }
+      } catch (error) {
+        console.warn("Failed to load master data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const addService = (service: Omit<Service, "id">) => {
-    setMasterData((current) => ({
+    loadData();
+  }, []);
+
+  // Setup sync status listener
+  useEffect(() => {
+    const unsubscribe = hybridStorage.onSyncStatusChange(setSyncStatus);
+    return unsubscribe;
+  }, []);
+
+  // Start realtime sync
+  useEffect(() => {
+    hybridStorage.startRealtimeSync();
+    return () => {
+      hybridStorage.stopRealtimeSync();
+    };
+  }, []);
+
+  const addService = async (service: Omit<Service, "id">) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       services: [...current.services, { ...service, id: generateId() }],
     }));
+    setMasterData(newData);
   };
 
-  const updateService = (id: string, updates: Partial<Service>) => {
-    setMasterData((current) => ({
+  const updateService = async (id: string, updates: Partial<Service>) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       services: current.services.map((service) =>
         service.id === id ? { ...service, ...updates, id } : service,
       ),
     }));
+    setMasterData(newData);
   };
 
-  const removeService = (id: string) => {
-    setMasterData((current) => ({
+  const removeService = async (id: string) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       services: current.services.filter((service) => service.id !== id),
     }));
+    setMasterData(newData);
   };
 
-  const addGuide = (guide: Omit<Guide, "id">) => {
-    setMasterData((current) => ({
+  const addGuide = async (guide: Omit<Guide, "id">) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       guides: [...current.guides, { ...guide, id: generateId() }],
     }));
+    setMasterData(newData);
   };
 
-  const updateGuide = (id: string, updates: Partial<Guide>) => {
-    setMasterData((current) => ({
+  const updateGuide = async (id: string, updates: Partial<Guide>) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       guides: current.guides.map((guide) =>
         guide.id === id ? { ...guide, ...updates, id } : guide,
       ),
     }));
+    setMasterData(newData);
   };
 
-  const removeGuide = (id: string) => {
-    setMasterData((current) => ({
+  const removeGuide = async (id: string) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       guides: current.guides.filter((guide) => guide.id !== id),
     }));
+    setMasterData(newData);
   };
 
-  const addPartner = (partner: Omit<Partner, "id">) => {
-    setMasterData((current) => ({
+  const addPartner = async (partner: Omit<Partner, "id">) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       partners: [...current.partners, { ...partner, id: generateId() }],
     }));
+    setMasterData(newData);
   };
 
-  const updatePartner = (id: string, updates: Partial<Partner>) => {
-    setMasterData((current) => ({
+  const updatePartner = async (id: string, updates: Partial<Partner>) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       partners: current.partners.map((partner) =>
         partner.id === id ? { ...partner, ...updates, id } : partner,
       ),
     }));
+    setMasterData(newData);
   };
 
-  const removePartner = (id: string) => {
-    setMasterData((current) => ({
+  const removePartner = async (id: string) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       partners: current.partners.filter((partner) => partner.id !== id),
     }));
+    setMasterData(newData);
   };
 
-  const addPerDiemRate = (rate: Omit<PerDiemRate, "id">) => {
-    setMasterData((current) => ({
+  const addPerDiemRate = async (rate: Omit<PerDiemRate, "id">) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       perDiemRates: [...current.perDiemRates, { ...rate, id: generateId() }],
     }));
+    setMasterData(newData);
   };
 
-  const updatePerDiemRate = (id: string, updates: Partial<PerDiemRate>) => {
-    setMasterData((current) => ({
+  const updatePerDiemRate = async (id: string, updates: Partial<PerDiemRate>) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       perDiemRates: current.perDiemRates.map((rate) =>
         rate.id === id ? { ...rate, ...updates, id } : rate,
       ),
     }));
+    setMasterData(newData);
   };
 
-  const removePerDiemRate = (id: string) => {
-    setMasterData((current) => ({
+  const removePerDiemRate = async (id: string) => {
+    const newData = await updateMasterData(masterData, (current) => ({
       ...current,
       perDiemRates: current.perDiemRates.filter((rate) => rate.id !== id),
     }));
+    setMasterData(newData);
   };
 
-  const addNationality = (nationality: string) => {
+  const addNationality = async (nationality: string) => {
     const normalized = nationality.trim();
     if (!normalized) return;
-    setMasterData((current) => {
+    const newData = await updateMasterData(masterData, (current) => {
       if (
         current.catalogs.nationalities
           .map((item) => item.toLowerCase())
@@ -195,12 +226,13 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
         },
       };
     });
+    setMasterData(newData);
   };
 
-  const addServiceType = (type: string) => {
+  const addServiceType = async (type: string) => {
     const normalized = type.trim();
     if (!normalized) return;
-    setMasterData((current) => {
+    const newData = await updateMasterData(masterData, (current) => {
       if (
         current.catalogs.serviceTypes
           .map((item) => item.toLowerCase())
@@ -216,10 +248,12 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
         },
       };
     });
+    setMasterData(newData);
   };
 
-  const resetMasterData = () => {
-    setMasterData(defaultMasterData);
+  const resetMasterData = async () => {
+    const newData = await updateMasterData(masterData, () => defaultMasterData);
+    setMasterData(newData);
   };
 
   const findServiceByName = (query: string) => {
@@ -238,8 +272,19 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const forceSync = async () => {
+    try {
+      await hybridStorage.forceSync();
+    } catch (error) {
+      console.warn("Force sync failed:", error);
+      throw error;
+    }
+  };
+
   const value: MasterDataContextValue = {
     masterData,
+    syncStatus,
+    isLoading,
     addService,
     updateService,
     removeService,
@@ -257,6 +302,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     resetMasterData,
     findServiceByName,
     findGuideByName,
+    forceSync,
   };
 
   return (
