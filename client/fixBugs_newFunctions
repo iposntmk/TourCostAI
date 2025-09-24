@@ -1,0 +1,49 @@
+1. nội dung giải thích dài nên đưa vào tooltip ví dụ: Tải hình ảnh lịch trình " đưa vào tooltip: Định dạng hỗ trợ: JPG, PNG, PDF. Công cụ AI đọc được tài liệu nhiều trang và nhận diện giá, hướng dẫn viên, dịch vụ cùng ghi chú.
+
+Hoặc tải tệp JSON đã chuẩn hóa để thêm tour hàng loạt hoặc điền sẵn dữ liệu kiểm tra trước khi xác nhận.
+
+Nhấn nút Tải JSON mẫu để tải về ví dụ đúng cấu trúc cho quá trình nhập liệu."
+
+2. ảnh tải lên cho phép xem thumbnail
+3. ẩn khi mới tải trang, sau chức năng chạy gemini xong mới hiện thị:  Xác minh & làm sạch
+4. xác nhận và tạo tour xong thì lưu tour đó vào firebase store, phân biệt bằng mã tour (nếu trùng mã tour thì cho phép cập nhật)
+5. thông báo này ko hợp lý: Chuyến khởi hành sắp tới (đây là app giành cho hướng dẫn viên nhập thông tin tour và chi phí sau khi đã hoàn thành tour trên thực tế)
+và tạo bảng kê --> gửi công ty --> để nhận tiền đã chi trong tour (vé, dịch vụ, công tác phí,..) từ công ty)
+6. master data: xoá phần đối tác
+7. app dùng cho người việt, nên dữ liệu mặc định trong master data cũng phải tiếng việt có dấu + chuẩn hoá
+8. xoá: Đã đồng bộ. vì đã lưu toàn bộ lên firebase dtaabase
+9. Bảng điều hành: cho phép chọn cột để xem/ẩn (toàn bộ cột của tour)
+10. khi cuộn trang lên/xuông, qua về các nút chức năng phải pin/dock/cố định ở vị trí dễ thao tác (ui/ux)
+11. tab mục lịch trình và địa điểm đang lỗi css
+12. tab tổng kết và tài chính: bố trí theo hàng dọc từ trên xuống và cho màu (ví dụ cộng vào thì màu xanh, trừ đi màu đỏ,...), lable và input trên cùng 1 hàng.
+
+
+---
+khi chuyển từ json (gemini trả về) ở mục --Xác minh & làm sạch--
+-guidename/company: nếu tìm thấy chính xác guidename/company trong master data thì dùng guidename/company đó, ngược lại hày hiển thị dropdownlist danh sách 
+guidename/company trong master data cho user tự chọn bằng tay (app gợi ý bằng cách tính toán sự tương đồng để gợi ý cho user chọn), và nếu không có tróng master
+data thì chp phép user thêm vào master data để dùng về sau.
+
+nationality: nếu tìm thấy quốc tịch chính xác trong master data thì dùng quốc tịch đó, ngược lại hày hiển thị dropdownlist danh sash quốc tịch trong master data
+cho user tự chọn bằng tay (app gợi ý bằng cách tính toán sự tương đồng để gợi ý cho user chọn),và nếu không có tróng master
+data thì chp phép user thêm vào master data để dùng về sau.
+
+
+
+1 tour cần lưu baom gồm các trường: 
+- mã tour (duy nhất, bắt buộc)
+- 1 guide name : lấy từ master data. 
+- nhiều tên khách: khi lưu vào database (cách nhau bởi dấu phẩu)
+- nhiều quốc tịch: chọn nhiều quốc tịch từ master data khi lưu thì cách nhau bới dấu phẩy.
+- số lượng khách (dạng số)
+- 1 tên công ty (lấy từ master data)
+- ngày bắt đầu
+- ngày kết thúc
+- nhiều dịch vụ
+- nhiều điểm tham quan
+- 
+
+
+
+
+
