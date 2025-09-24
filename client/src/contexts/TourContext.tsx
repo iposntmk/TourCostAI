@@ -10,6 +10,12 @@ import {
   normalizeFinancialSummary,
 } from "../utils/calculations";
 import { generateId } from "../utils/ids";
+import {
+  deleteTourDocument,
+  fetchTours,
+  saveTourDocument,
+  subscribeToTours,
+} from "../services/tourStorage";
 import type { Tour } from "../types";
 import { useMasterData } from "./MasterDataContext";
 
@@ -17,9 +23,9 @@ const TOURS_STORAGE_KEY = "tour-cost-ai/tours";
 
 export interface TourContextValue {
   tours: Tour[];
-  createTour: (tour: Omit<Tour, "id" | "createdAt" | "updatedAt">) => string;
-  updateTour: (id: string, updater: (tour: Tour) => Tour) => void;
-  deleteTour: (id: string) => void;
+  createTour: (tour: Omit<Tour, "id" | "createdAt" | "updatedAt">) => Promise<string>;
+  updateTour: (id: string, updater: (tour: Tour) => Tour) => Promise<void>;
+  deleteTour: (id: string) => Promise<void>;
   getTourById: (id: string) => Tour | undefined;
 }
 
@@ -57,6 +63,37 @@ export const TourProvider = ({ children }: { children: ReactNode }) => {
     saveTours(tours);
   }, [tours]);
 
+  useEffect(() => {
+    let unsubscribe: ReturnType<typeof subscribeToTours> | null = null;
+    let isMounted = true;
+
+    const loadFromCloud = async () => {
+      try {
+        const remoteTours = await fetchTours();
+        if (isMounted && remoteTours.length > 0) {
+          setTours(remoteTours);
+        }
+      } catch (error) {
+        console.warn("Failed to load tours from Firestore", error);
+      }
+
+      unsubscribe = subscribeToTours((remoteTours) => {
+        if (isMounted) {
+          setTours(remoteTours);
+        }
+      });
+    };
+
+    loadFromCloud();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   const normalizeTour = (tour: Tour): Tour => {
     const recalculatedPerDiem = calculatePerDiemEntries(
       tour.itinerary,
@@ -78,28 +115,85 @@ export const TourProvider = ({ children }: { children: ReactNode }) => {
     };
   };
 
-  const createTour = (tour: Omit<Tour, "id" | "createdAt" | "updatedAt">) => {
-    const now = new Date().toISOString();
-    const normalizedTour = normalizeTour({
-      ...tour,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
+  const createTour = async (
+    tour: Omit<Tour, "id" | "createdAt" | "updatedAt">,
+  ): Promise<string> => {
+    const existing = tours.find(
+      (item) =>
+        item.general.code.trim().toLowerCase() ===
+        tour.general.code.trim().toLowerCase(),
+    );
+
+    const baseTour = existing
+      ? {
+          ...existing,
+          ...tour,
+          id: existing.id,
+          createdAt: existing.createdAt,
+          updatedAt: existing.updatedAt,
+        }
+      : {
+          ...tour,
+          id: generateId(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+    const normalizedTour = normalizeTour(baseTour);
+
+    setTours((current) => {
+      if (existing) {
+        return current.map((item) =>
+          item.id === existing.id ? normalizedTour : item,
+        );
+      }
+      return [...current, normalizedTour];
     });
-    setTours((current) => [...current, normalizedTour]);
+
+    try {
+      await saveTourDocument(normalizedTour);
+    } catch (error) {
+      console.warn("Failed to save tour to Firestore", error);
+    }
     return normalizedTour.id;
   };
 
-  const updateTour = (id: string, updater: (tour: Tour) => Tour) => {
+  const updateTour = async (
+    id: string,
+    updater: (tour: Tour) => Tour,
+  ): Promise<void> => {
+    let updated: Tour | null = null;
     setTours((current) =>
-      current.map((tour) =>
-        tour.id === id ? normalizeTour(updater(tour)) : tour,
-      ),
+      current.map((tour) => {
+        if (tour.id === id) {
+          const normalized = normalizeTour(updater({ ...tour }));
+          updated = normalized;
+          return normalized;
+        }
+        return tour;
+      }),
     );
+
+    if (updated) {
+      try {
+        await saveTourDocument(updated);
+      } catch (error) {
+        console.warn("Failed to update tour in Firestore", error);
+      }
+    }
   };
 
-  const deleteTour = (id: string) => {
+  const deleteTour = async (id: string): Promise<void> => {
+    const tourToRemove = tours.find((tour) => tour.id === id);
     setTours((current) => current.filter((tour) => tour.id !== id));
+
+    if (tourToRemove) {
+      try {
+        await deleteTourDocument(tourToRemove.general.code);
+      } catch (error) {
+        console.warn("Failed to delete tour from Firestore", error);
+      }
+    }
   };
 
   const getTourById = (id: string) => tours.find((tour) => tour.id === id);

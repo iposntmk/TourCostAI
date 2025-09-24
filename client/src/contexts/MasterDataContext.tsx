@@ -8,13 +8,7 @@ import {
 import { defaultMasterData, emptyMasterData } from "../data/masterData";
 import { hybridStorage, type SyncStatus } from "../services/hybridStorage";
 import { generateId } from "../utils/ids";
-import type {
-  Guide,
-  MasterData,
-  Partner,
-  PerDiemRate,
-  Service,
-} from "../types";
+import type { Guide, MasterData, PerDiemRate, Service } from "../types";
 
 export interface MasterDataContextValue {
   masterData: MasterData;
@@ -26,9 +20,6 @@ export interface MasterDataContextValue {
   addGuide: (guide: Omit<Guide, "id">) => void;
   updateGuide: (id: string, updates: Partial<Guide>) => void;
   removeGuide: (id: string) => void;
-  addPartner: (partner: Omit<Partner, "id">) => void;
-  updatePartner: (id: string, updates: Partial<Partner>) => void;
-  removePartner: (id: string) => void;
   addPerDiemRate: (rate: Omit<PerDiemRate, "id">) => void;
   updatePerDiemRate: (id: string, updates: Partial<PerDiemRate>) => void;
   removePerDiemRate: (id: string) => void;
@@ -159,32 +150,6 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     setMasterData(newData);
   };
 
-  const addPartner = async (partner: Omit<Partner, "id">) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      partners: [...current.partners, { ...partner, id: generateId() }],
-    }));
-    setMasterData(newData);
-  };
-
-  const updatePartner = async (id: string, updates: Partial<Partner>) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      partners: current.partners.map((partner) =>
-        partner.id === id ? { ...partner, ...updates, id } : partner,
-      ),
-    }));
-    setMasterData(newData);
-  };
-
-  const removePartner = async (id: string) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      partners: current.partners.filter((partner) => partner.id !== id),
-    }));
-    setMasterData(newData);
-  };
-
   const addPerDiemRate = async (rate: Omit<PerDiemRate, "id">) => {
     const newData = await updateMasterData(masterData, (current) => ({
       ...current,
@@ -306,9 +271,6 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     addGuide,
     updateGuide,
     removeGuide,
-    addPartner,
-    updatePartner,
-    removePartner,
     addPerDiemRate,
     updatePerDiemRate,
     removePerDiemRate,
