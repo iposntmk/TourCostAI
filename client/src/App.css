@@ -256,6 +256,12 @@
 
 .primary-button:not(:disabled):hover {
   transform: translateY(-1px);
+  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.3);
+}
+
+.primary-button:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
 }
 
 .ghost-button {
@@ -265,6 +271,12 @@
 
 .ghost-button:hover {
   background: rgba(148, 163, 184, 0.2);
+  transform: translateY(-1px);
+}
+
+.ghost-button:active {
+  transform: translateY(0);
+  background: rgba(148, 163, 184, 0.25);
 }
 
 .danger-button {
@@ -274,6 +286,12 @@
 
 .danger-button:hover {
   background: rgba(220, 38, 38, 0.18);
+  transform: translateY(-1px);
+}
+
+.danger-button:active {
+  transform: translateY(0);
+  background: rgba(220, 38, 38, 0.25);
 }
 
 .table-responsive {
@@ -293,6 +311,23 @@
 .data-table td {
   padding: 0.9rem 1rem;
   text-align: left;
+}
+
+.data-table input,
+.data-table select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 0.85rem;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.data-table input:focus,
+.data-table select:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 .data-table thead {
@@ -381,6 +416,17 @@
   color: #1f2937;
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: rgba(37, 99, 235, 0.5);
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+.upload-dropzone:active {
+  transform: translateY(0);
 }
 
 .upload-actions {
@@ -449,6 +495,15 @@
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(255, 255, 255, 0.9);
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.form-grid textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  line-height: 1.5;
 }
 
 .form-grid input:focus,
@@ -686,6 +741,177 @@
   border-radius: 10px;
 }
 
+/* Filter styles */
+.filter-grid {
+  display: grid;
+  gap: 1rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-items: end;
+  margin-top: 1rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filter-field label {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.filter-field input,
+.filter-field select {
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon svg {
+  position: absolute;
+  left: 0.75rem;
+  color: #94a3b8;
+  z-index: 1;
+}
+
+.input-with-icon input {
+  padding-left: 2.5rem;
+}
+
+/* Tab Menu styles */
+.tab-menu-container {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+
+.tab-menu {
+  display: flex;
+  position: relative;
+  z-index: 2;
+}
+
+.tab-menu-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.tab-menu-item:hover {
+  color: #475569;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.tab-menu-item.active {
+  color: var(--color-primary);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.tab-icon {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.tab-label {
+  white-space: nowrap;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(120deg, var(--color-primary), var(--color-primary-light));
+  transition: transform 0.3s ease;
+  z-index: 1;
+}
+
+.tab-content {
+  margin-top: 1.5rem;
+}
+
+/* Scrollbar styling */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Loading states */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid rgba(37, 99, 235, 0.3);
+  border-top: 2px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Focus visible for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 @media (max-width: 992px) {
   .layout-two-column {
     grid-template-columns: 1fr;
@@ -728,6 +954,19 @@
   .nav-toggle {
     display: inline-flex;
   }
+
+  .tab-menu-item {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .tab-label {
+    display: none;
+  }
+
+  .tab-icon {
+    font-size: 1.2rem;
+  }
 }
 
 @media (max-width: 560px) {
@@ -735,12 +974,42 @@
     grid-template-columns: 1fr;
   }
 
+  .filter-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
   .table-responsive {
     margin: 0 -1rem;
     border-radius: 0;
   }
 
+  .data-table th,
+  .data-table td {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .data-table input,
+  .data-table select {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.8rem;
+  }
+
   .panel {
     border-radius: 18px;
+  }
+
+  .upload-dropzone {
+    padding: 1.5rem 1rem;
+  }
+
+  .upload-dropzone span {
+    font-size: 0.9rem;
   }
 }

@@ -1,4 +1,4 @@
-# TourCost AI – Intelligent tour management UI
+# TourCostAI – Intelligent tour management UI
 
 This Vite + React application delivers the responsive front end for the TourCost AI platform. It guides travel operations teams through the full lifecycle of digitising tour programmes, validating them against Master Data, and reviewing financial outcomes.
 

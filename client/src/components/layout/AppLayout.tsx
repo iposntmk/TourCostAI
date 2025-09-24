@@ -22,7 +22,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
         <div className="app-brand">
           <span className="brand-badge">AI</span>
           <div>
-            <div className="brand-title">TourCost Intelligence</div>
+            <div className="brand-title">TourCostAI</div>
             <div className="brand-subtitle">Tự động hóa và kiểm tra tour thông minh</div>
           </div>
         </div>
