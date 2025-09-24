@@ -1,0 +1,197 @@
+[
+  {
+    "general": {
+      "tourCode": "SAMPLE-GEM-2408",
+      "customerName": "Gia đình Trần",
+      "clientCompany": "Saigon Travel Partners",
+      "pax": 4,
+      "nationality": "Singapore",
+      "startDate": "2024-08-12T00:00:00.000Z",
+      "endDate": "2024-08-14T00:00:00.000Z",
+      "guideName": "Cao Huu Tu",
+      "driverName": "Mr. Phuc",
+      "notes": "Khách yêu cầu bữa tối chay ngày thứ 2 và hỗ trợ check-in sớm."
+    },
+    "services": [
+      {
+        "rawName": "Ba Na Hills Entrance Ticket",
+        "quantity": 4,
+        "price": 790000,
+        "notes": "Yêu cầu VIP line"
+      },
+      {
+        "rawName": "Han River Dragon Boat",
+        "quantity": 1,
+        "price": 1200000
+      },
+      {
+        "rawName": "Vietnamese Set Menu Dinner",
+        "quantity": 4,
+        "price": 240000,
+        "notes": "Thực đơn chay"
+      }
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "date": "2024-08-12T00:00:00.000Z",
+        "location": "Đà Nẵng",
+        "activities": [
+          "Đón sân bay",
+          "Tham quan Ngũ Hành Sơn",
+          "Du thuyền sông Hàn buổi tối"
+        ]
+      },
+      {
+        "day": 2,
+        "date": "2024-08-13T00:00:00.000Z",
+        "location": "Bà Nà Hills",
+        "activities": [
+          "Cáp treo",
+          "Cầu Vàng",
+          "Fantasy Park"
+        ]
+      },
+      {
+        "day": 3,
+        "date": "2024-08-14T00:00:00.000Z",
+        "location": "Hội An",
+        "activities": [
+          "Phố cổ",
+          "Xưởng làm đèn lồng",
+          "Ăn tối nhà hàng chay"
+        ]
+      }
+    ],
+    "otherExpenses": [
+      {
+        "description": "Nước suối cho khách",
+        "amount": 120000,
+        "date": "2024-08-12T00:00:00.000Z"
+      },
+      {
+        "description": "Phí gửi xe Ngũ Hành Sơn",
+        "amount": 50000,
+        "date": "2024-08-12T00:00:00.000Z"
+      }
+    ],
+    "advance": 6000000,
+    "collectionsForCompany": 3500000,
+    "companyTip": 300000
+  },
+  {
+    "general": {
+      "code": "DAD-SAMPLE-2408",
+      "customerName": "Smith Family",
+      "clientCompany": "Global Holidays",
+      "nationality": "United States",
+      "pax": 2,
+      "startDate": "2024-08-18T00:00:00.000Z",
+      "endDate": "2024-08-20T00:00:00.000Z",
+      "guideId": "guide-lan-anh",
+      "driverName": "Mr. Thanh",
+      "notes": "Kỷ niệm 10 năm ngày cưới, cần bàn ăn riêng tại Hội An."
+    },
+    "itinerary": [
+      {
+        "id": "itn-day-1",
+        "day": 1,
+        "date": "2024-08-18T00:00:00.000Z",
+        "location": "Đà Nẵng",
+        "activities": [
+          "Đón sân bay và nhận phòng",
+          "Tham quan Bảo tàng Chăm",
+          "Ăn tối tại nhà hàng địa phương"
+        ]
+      },
+      {
+        "id": "itn-day-2",
+        "day": 2,
+        "date": "2024-08-19T00:00:00.000Z",
+        "location": "Bà Nà Hills",
+        "activities": [
+          "Cáp treo lên đỉnh",
+          "Chụp ảnh Cầu Vàng",
+          "Buffet trưa"
+        ]
+      },
+      {
+        "id": "itn-day-3",
+        "day": 3,
+        "date": "2024-08-20T00:00:00.000Z",
+        "location": "Hội An",
+        "activities": [
+          "Tham quan phố cổ",
+          "Workshop làm lồng đèn",
+          "Bữa tối kỷ niệm"
+        ]
+      }
+    ],
+    "services": [
+      {
+        "id": "svc-item-1",
+        "serviceId": "svc-airport-transfer",
+        "description": "Da Nang Airport Transfer",
+        "quantity": 1,
+        "unitPrice": 550000,
+        "sourcePrice": 550000,
+        "discrepancy": 0,
+        "notes": "Đón sân bay bằng xe 7 chỗ"
+      },
+      {
+        "id": "svc-item-2",
+        "serviceId": "svc-bana-ticket",
+        "description": "Ba Na Hills Entrance Ticket",
+        "quantity": 2,
+        "unitPrice": 800000,
+        "sourcePrice": 780000,
+        "discrepancy": 20000,
+        "notes": "Giá đối tác ưu đãi"
+      },
+      {
+        "id": "svc-item-3",
+        "serviceId": "svc-vietnamese-set-menu",
+        "description": "Vietnamese Set Menu Dinner",
+        "quantity": 2,
+        "unitPrice": 250000,
+        "sourcePrice": 250000,
+        "discrepancy": 0,
+        "notes": "Bố trí bàn riêng"
+      }
+    ],
+    "perDiem": [
+      {
+        "id": "perdiem-1",
+        "guideId": "guide-lan-anh",
+        "location": "Đà Nẵng",
+        "days": 2,
+        "rate": 450000,
+        "total": 900000
+      },
+      {
+        "id": "perdiem-2",
+        "guideId": "guide-lan-anh",
+        "location": "Hội An",
+        "days": 1,
+        "rate": 500000,
+        "total": 500000
+      }
+    ],
+    "otherExpenses": [
+      {
+        "id": "expense-1",
+        "description": "Hoa chúc mừng đặt trên bàn ăn",
+        "amount": 350000,
+        "date": "2024-08-20T00:00:00.000Z",
+        "notes": "Thanh toán tiền mặt"
+      }
+    ],
+    "financials": {
+      "advance": 5500000,
+      "collectionsForCompany": 4200000,
+      "companyTip": 500000,
+      "totalCost": 0,
+      "differenceToAdvance": 0
+    }
+  }
+]
