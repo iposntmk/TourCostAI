@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { FiX, FiSave, FiRefreshCw, FiAlertTriangle } from "react-icons/fi";
 import type { Prompt } from "../../types/prompt";
-import { savePrompt, updatePrompt } from "../../services/promptService";
+import { updatePrompt } from "../../services/promptService";
 
 interface PromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   prompt?: Prompt | null;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }
 
 export const PromptModal = ({ isOpen, onClose, prompt, onSave }: PromptModalProps) => {
@@ -28,15 +28,16 @@ export const PromptModal = ({ isOpen, onClose, prompt, onSave }: PromptModalProp
         content: prompt.content,
         isActive: prompt.isActive
       });
-    } else {
+      setError(null);
+    } else if (isOpen) {
       setFormData({
         name: "",
         description: "",
         content: "",
         isActive: true
       });
+      setError("Không tìm thấy prompt để chỉnh sửa.");
     }
-    setError(null);
   }, [prompt, isOpen]);
 
   const handleSave = async () => {
@@ -49,12 +50,12 @@ export const PromptModal = ({ isOpen, onClose, prompt, onSave }: PromptModalProp
     setError(null);
 
     try {
-      if (prompt) {
-        await updatePrompt(prompt.id, formData);
-      } else {
-        await savePrompt(formData);
+      if (!prompt) {
+        throw new Error("Không có prompt để cập nhật");
       }
-      onSave();
+
+      await updatePrompt(prompt.id, formData);
+      await onSave();
       onClose();
     } catch (error) {
       console.error("Error saving prompt:", error);
@@ -76,7 +77,7 @@ export const PromptModal = ({ isOpen, onClose, prompt, onSave }: PromptModalProp
       <div className="modal-content large">
         <div className="modal-header">
           <h2 className="modal-title">
-            {prompt ? "Chỉnh sửa Prompt" : "Tạo Prompt mới"}
+            Chỉnh sửa Prompt
           </h2>
           <button className="modal-close" onClick={onClose}>
             <FiX />
@@ -114,7 +115,7 @@ export const PromptModal = ({ isOpen, onClose, prompt, onSave }: PromptModalProp
             <label className="full-width">
               <span>Nội dung prompt *</span>
               <textarea
-                rows={20}
+                rows={28}
                 value={formData.content}
                 onChange={(e) => handleInputChange("content", e.target.value)}
                 placeholder="Nhập nội dung prompt cho Gemini AI..."
@@ -148,10 +149,10 @@ export const PromptModal = ({ isOpen, onClose, prompt, onSave }: PromptModalProp
           <button className="ghost-button" onClick={onClose} disabled={isSaving}>
             Hủy
           </button>
-          <button 
-            className="primary-button" 
+          <button
+            className="primary-button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !prompt}
           >
             {isSaving ? <FiRefreshCw className="spin" /> : <FiSave />}
             {isSaving ? "Đang lưu..." : "Lưu prompt"}
