@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FiDatabase, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiBriefcase, FiDollarSign, FiList, FiTrash2 } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiDatabase, FiDownload, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiBriefcase, FiDollarSign, FiList, FiTrash2 } from "react-icons/fi";
 import { PageHeader } from "../../components/common/PageHeader";
 import { TabMenu } from "../../components/common/TabMenu";
 import { SyncStatus } from "../../components/common/SyncStatus";
@@ -38,9 +38,9 @@ interface PerDiemFormState {
   notes: string;
 }
 
-const emptyServiceForm = (): ServiceFormState => ({
+const emptyServiceForm = (defaultCategory = ""): ServiceFormState => ({
   name: "",
-  category: "Vé tham quan",
+  category: defaultCategory,
   price: 0,
   unit: "",
   partnerId: "",
@@ -89,7 +89,12 @@ export const MasterDataPage = () => {
     clearAllData,
   } = useMasterData();
 
-  const [serviceForm, setServiceForm] = useState<ServiceFormState>(emptyServiceForm);
+  const serviceTypes = masterData.catalogs.serviceTypes;
+  const defaultServiceCategory = serviceTypes[0] ?? "";
+
+  const [serviceForm, setServiceForm] = useState<ServiceFormState>(() =>
+    emptyServiceForm(defaultServiceCategory),
+  );
   const [guideForm, setGuideForm] = useState<GuideFormState>(emptyGuideForm);
   const [partnerForm, setPartnerForm] = useState<PartnerFormState>(emptyPartnerForm);
   const [perDiemForm, setPerDiemForm] = useState<PerDiemFormState>(emptyPerDiemForm);
@@ -105,6 +110,56 @@ export const MasterDataPage = () => {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
+  useEffect(() => {
+    setServiceForm((current) => {
+      if (serviceTypes.length === 0) {
+        return current.category === "" ? current : { ...current, category: "" };
+      }
+
+      if (!current.category || !serviceTypes.includes(current.category)) {
+        return { ...current, category: serviceTypes[0] };
+      }
+
+      return current;
+    });
+  }, [serviceTypes]);
+
+  const getServiceTypeOptions = (currentCategory?: string) => {
+    if (currentCategory && serviceTypes.includes(currentCategory)) {
+      return serviceTypes;
+    }
+
+    if (currentCategory && currentCategory !== "") {
+      return [currentCategory, ...serviceTypes];
+    }
+
+    return serviceTypes;
+  };
+
+  const renderCategorySelect = (
+    value: string,
+    onChange: (nextValue: string) => void,
+  ) => {
+    const options = getServiceTypeOptions(value);
+    const hasOptions = options.length > 0;
+
+    return (
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {!hasOptions && <option value="">Chưa có danh mục</option>}
+        {hasOptions && value === "" && (
+          <option value="" disabled>
+            Chọn danh mục
+          </option>
+        )}
+        {options.map((type) => (
+          <option key={type || "blank"} value={type}>
+            {type || "—"}
+          </option>
+        ))}
+      </select>
+    );
+  };
+
   const tabs = [
     { id: "services", label: "Dịch vụ & bảng giá", icon: <FiDatabase /> },
     { id: "guides", label: "Hướng dẫn viên", icon: <FiUsers /> },
@@ -114,7 +169,12 @@ export const MasterDataPage = () => {
   ];
 
   const handleAddService = () => {
-    if (!serviceForm.name.trim() || serviceForm.price <= 0 || !serviceForm.unit.trim()) {
+    if (
+      !serviceForm.name.trim() ||
+      !serviceForm.category ||
+      serviceForm.price <= 0 ||
+      !serviceForm.unit.trim()
+    ) {
       return;
     }
     addService({
@@ -125,12 +185,12 @@ export const MasterDataPage = () => {
       partnerId: serviceForm.partnerId || undefined,
       description: serviceForm.description || undefined,
     });
-    setServiceForm(emptyServiceForm());
+    setServiceForm(emptyServiceForm(serviceTypes[0] ?? ""));
   };
 
   const handleSaveService = () => {
     if (!editingService) return;
-    if (!editingService.name.trim() || editingService.price <= 0) return;
+    if (!editingService.name.trim() || !editingService.category || editingService.price <= 0) return;
     updateService(editingService.id, {
       name: editingService.name.trim(),
       category: editingService.category,
@@ -239,6 +299,121 @@ export const MasterDataPage = () => {
     }
   };
 
+  const exportToTextFile = (filename: string, lines: string[]) => {
+    const content = lines.join("\n");
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const toCsvRow = (
+    values: Array<string | number | null | undefined>,
+  ): string =>
+    values
+      .map((value) => {
+        const raw = String(value ?? "");
+        const normalized = raw.replace(/\r?\n/g, " ");
+        const escaped = normalized.replace(/"/g, '""');
+        return /[",]/.test(normalized) ? `"${escaped}"` : escaped;
+      })
+      .join(",");
+
+  const handleExportServicesTxt = () => {
+    const partnerLookup = new Map(
+      masterData.partners.map((partner) => [partner.id, partner.name] as const),
+    );
+    const header = toCsvRow([
+      "Tên dịch vụ",
+      "Danh mục",
+      "Giá",
+      "Đơn vị",
+      "Đối tác",
+      "Mô tả",
+    ]);
+    const lines = masterData.services.map((service) => {
+      const partnerName = service.partnerId
+        ? partnerLookup.get(service.partnerId) ?? ""
+        : "";
+      return toCsvRow([
+        service.name,
+        service.category,
+        service.price,
+        service.unit,
+        partnerName,
+        service.description ?? "",
+      ]);
+    });
+    exportToTextFile("services.txt", [header, ...lines]);
+  };
+
+  const handleExportGuidesTxt = () => {
+    const header = toCsvRow(["Tên", "Điện thoại", "Email", "Ngôn ngữ"]);
+    const lines = masterData.guides.map((guide) =>
+      toCsvRow([
+        guide.name,
+        guide.phone ?? "",
+        guide.email ?? "",
+        (guide.languages ?? []).join(", "),
+      ]),
+    );
+    exportToTextFile("guides.txt", [header, ...lines]);
+  };
+
+  const handleExportPartnersTxt = () => {
+    const header = toCsvRow([
+      "Tên",
+      "Người liên hệ",
+      "Điện thoại",
+      "Email",
+      "Địa chỉ",
+    ]);
+    const lines = masterData.partners.map((partner) =>
+      toCsvRow([
+        partner.name,
+        partner.contactName ?? "",
+        partner.phone ?? "",
+        partner.email ?? "",
+        partner.address ?? "",
+      ]),
+    );
+    exportToTextFile("partners.txt", [header, ...lines]);
+  };
+
+  const handleExportPerDiemTxt = () => {
+    const header = toCsvRow([
+      "Địa điểm",
+      "Mức phụ cấp",
+      "Tiền tệ",
+      "Ghi chú",
+    ]);
+    const lines = masterData.perDiemRates.map((rate) =>
+      toCsvRow([
+        rate.location,
+        rate.rate,
+        rate.currency,
+        rate.notes ?? "",
+      ]),
+    );
+    exportToTextFile("per-diem.txt", [header, ...lines]);
+  };
+
+  const handleExportCatalogsTxt = () => {
+    const lines = [
+      "[Quốc tịch]",
+      ...masterData.catalogs.nationalities,
+      "",
+      "[Loại dịch vụ]",
+      ...masterData.catalogs.serviceTypes,
+    ];
+    exportToTextFile("catalogs.txt", lines);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "services":
@@ -267,6 +442,17 @@ export const MasterDataPage = () => {
         </p>
       </div>
       <div className="panel-body">
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}
+        >
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={handleExportServicesTxt}
+          >
+            <FiDownload /> Xuất TXT
+          </button>
+        </div>
         <div className="table-responsive">
           <table className="data-table compact">
             <thead>
@@ -298,16 +484,13 @@ export const MasterDataPage = () => {
                   </td>
                   <td>
                     {editingService?.id === service.id ? (
-                      <input
-                        value={editingService.category}
-                        onChange={(event) =>
-                          setEditingService((current) =>
-                            current ? { ...current, category: event.target.value } : current,
-                          )
-                        }
-                      />
+                      renderCategorySelect(editingService.category, (nextValue) =>
+                        setEditingService((current) =>
+                          current ? { ...current, category: nextValue } : current,
+                        ),
+                      )
                     ) : (
-                      service.category
+                      service.category || "—"
                     )}
                   </td>
                   <td>
@@ -409,12 +592,9 @@ export const MasterDataPage = () => {
           </label>
           <label>
             <span>Danh mục</span>
-            <input
-              value={serviceForm.category}
-              onChange={(event) =>
-                setServiceForm((current) => ({ ...current, category: event.target.value }))
-              }
-            />
+            {renderCategorySelect(serviceForm.category, (nextValue) =>
+              setServiceForm((current) => ({ ...current, category: nextValue })),
+            )}
           </label>
           <label>
             <span>Đơn vị</span>
@@ -484,6 +664,17 @@ export const MasterDataPage = () => {
         </p>
       </div>
       <div className="panel-body">
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}
+        >
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={handleExportGuidesTxt}
+          >
+            <FiDownload /> Xuất TXT
+          </button>
+        </div>
         <div className="table-responsive">
           <table className="data-table compact">
             <thead>
@@ -649,6 +840,17 @@ export const MasterDataPage = () => {
         <div className="panel-title">Đối tác & nhà cung cấp</div>
       </div>
       <div className="panel-body">
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}
+        >
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={handleExportPartnersTxt}
+          >
+            <FiDownload /> Xuất TXT
+          </button>
+        </div>
         <div className="table-responsive">
           <table className="data-table compact">
             <thead>
@@ -807,6 +1009,17 @@ export const MasterDataPage = () => {
         <div className="panel-title">Cấu hình phụ cấp</div>
       </div>
       <div className="panel-body">
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}
+        >
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={handleExportPerDiemTxt}
+          >
+            <FiDownload /> Xuất TXT
+          </button>
+        </div>
         <div className="table-responsive">
           <table className="data-table compact">
             <thead>
@@ -972,6 +1185,17 @@ export const MasterDataPage = () => {
         </p>
       </div>
       <div className="panel-body">
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}
+        >
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={handleExportCatalogsTxt}
+          >
+            <FiDownload /> Xuất TXT
+          </button>
+        </div>
         <div className="catalog-grid">
           <div>
             <h3>Quốc tịch</h3>

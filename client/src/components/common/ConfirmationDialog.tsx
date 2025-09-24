@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import type { MouseEvent } from "react";
 import { FiAlertTriangle, FiX } from "react-icons/fi";
 
 interface ConfirmationDialogProps {
@@ -57,8 +57,8 @@ export const ConfirmationDialog = ({
 
   const styles = getVariantStyles();
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+  const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
       onClose();
     }
   };
