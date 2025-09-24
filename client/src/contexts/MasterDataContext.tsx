@@ -38,6 +38,7 @@ export interface MasterDataContextValue {
   findServiceByName: (query: string) => Service | undefined;
   findGuideByName: (query: string) => Guide | undefined;
   forceSync: () => Promise<void>;
+  clearAllData: () => Promise<void>;
 }
 
 const MasterDataContext = createContext<MasterDataContextValue | undefined>(
@@ -281,6 +282,17 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const clearAllData = async () => {
+    try {
+      await hybridStorage.clearAllData();
+      // Reset to default data after clearing
+      setMasterData(defaultMasterData);
+    } catch (error) {
+      console.warn("Clear all data failed:", error);
+      throw error;
+    }
+  };
+
   const value: MasterDataContextValue = {
     masterData,
     syncStatus,
@@ -303,6 +315,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     findServiceByName,
     findGuideByName,
     forceSync,
+    clearAllData,
   };
 
   return (

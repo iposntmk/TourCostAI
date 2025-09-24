@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { FiDatabase, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiBriefcase, FiDollarSign, FiList } from "react-icons/fi";
+import { FiDatabase, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiBriefcase, FiDollarSign, FiList, FiTrash2 } from "react-icons/fi";
 import { PageHeader } from "../../components/common/PageHeader";
 import { TabMenu } from "../../components/common/TabMenu";
 import { SyncStatus } from "../../components/common/SyncStatus";
+import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { useMasterData } from "../../contexts/MasterDataContext";
 import type { Guide, Partner, PerDiemRate, Service } from "../../types";
 import { formatCurrency } from "../../utils/format";
@@ -85,6 +86,7 @@ export const MasterDataPage = () => {
     addNationality,
     addServiceType,
     resetMasterData,
+    clearAllData,
   } = useMasterData();
 
   const [serviceForm, setServiceForm] = useState<ServiceFormState>(emptyServiceForm);
@@ -100,6 +102,8 @@ export const MasterDataPage = () => {
   const [serviceType, setServiceType] = useState("");
 
   const [activeTab, setActiveTab] = useState("services");
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const tabs = [
     { id: "services", label: "Dịch vụ & bảng giá", icon: <FiDatabase /> },
@@ -220,6 +224,19 @@ export const MasterDataPage = () => {
     if (!serviceType.trim()) return;
     addServiceType(serviceType);
     setServiceType("");
+  };
+
+  const handleClearAllData = async () => {
+    setIsClearing(true);
+    try {
+      await clearAllData();
+      setShowClearDialog(false);
+    } catch (error) {
+      console.error("Failed to clear all data:", error);
+      // You could add a toast notification here
+    } finally {
+      setIsClearing(false);
+    }
   };
 
   const renderTabContent = () => {
@@ -1008,6 +1025,13 @@ export const MasterDataPage = () => {
             <button className="ghost-button" onClick={resetMasterData}>
               <FiRefreshCw /> Đặt lại mặc định
             </button>
+            <button 
+              className="danger-button" 
+              onClick={() => setShowClearDialog(true)}
+              title="Xóa toàn bộ dữ liệu (cả local và cloud)"
+            >
+              <FiTrash2 /> Xóa toàn bộ
+            </button>
           </div>
         }
       />
@@ -1017,6 +1041,18 @@ export const MasterDataPage = () => {
       <div className="tab-content">
         {renderTabContent()}
       </div>
+
+      <ConfirmationDialog
+        isOpen={showClearDialog}
+        onClose={() => setShowClearDialog(false)}
+        onConfirm={handleClearAllData}
+        title="Xóa toàn bộ dữ liệu"
+        message="Bạn có chắc chắn muốn xóa toàn bộ dữ liệu Master Data? Hành động này sẽ xóa tất cả dữ liệu cả trên thiết bị này và trên cloud, và không thể hoàn tác."
+        confirmText="Xóa toàn bộ"
+        cancelText="Hủy"
+        variant="danger"
+        isLoading={isClearing}
+      />
     </div>
   );
 };

@@ -316,10 +316,22 @@ class HybridStorageService {
   }
 
   // Clear all data
-  clearAllData(): void {
+  async clearAllData(): Promise<void> {
+    // Clear local storage
     localStorage.removeItem(MASTER_DATA_STORAGE_KEY);
     localStorage.removeItem(SYNC_METADATA_KEY);
     localStorage.removeItem("device-id");
+
+    // Clear Firestore data if online
+    if (this.isOnline) {
+      try {
+        const docRef = doc(db, COLLECTIONS.MASTER_DATA, this.deviceId);
+        await setDoc(docRef, {}, { merge: false }); // Overwrite with empty object
+      } catch (error) {
+        console.warn("Failed to clear Firestore data:", error);
+        throw error;
+      }
+    }
   }
 }
 
