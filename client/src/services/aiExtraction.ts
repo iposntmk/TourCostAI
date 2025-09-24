@@ -1,4 +1,4 @@
-import type { ExtractionResult, MasterData } from "../types";
+import type { ExtractionGeneralInfo, ExtractionResult, MasterData } from "../types";
 
 const NS = (import.meta.env.VITE_STORAGE_NAMESPACE as string) || "tourcostai";
 
@@ -46,6 +46,7 @@ export async function extractWithAI(
   masterData: MasterData,
   apiKey: string,
   customPrompt?: string,
+  generalOverrides?: Partial<ExtractionGeneralInfo>,
 ): Promise<ExtractionResult> {
   if (!apiKey) {
     throw new Error("API key is required for live extraction");
@@ -111,7 +112,7 @@ export async function extractWithAI(
     console.log("Gemini extracted text:", extractedText.substring(0, 500) + "...");
     
     // Parse the extracted text into structured data
-    return parseExtractedData(extractedText, masterData);
+    return parseExtractedData(extractedText, masterData, generalOverrides);
   } catch (error) {
     console.error("Gemini API extraction failed:", error);
     throw new Error(`Extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -226,7 +227,11 @@ HƯỚNG DẪN PHÂN TÍCH:
 /**
  * Parse extracted text into structured data
  */
-function parseExtractedData(extractedText: string, masterData: MasterData): ExtractionResult {
+function parseExtractedData(
+  extractedText: string,
+  masterData: MasterData,
+  generalOverrides?: Partial<ExtractionGeneralInfo>,
+): ExtractionResult {
   try {
     console.log("Parsing extracted text:", extractedText);
     
@@ -250,7 +255,7 @@ Có thể:
     
     const parsedData = JSON.parse(jsonString);
     
-    const result = normalizeExtractionResult(parsedData, masterData);
+    const result = normalizeExtractionResult(parsedData, masterData, generalOverrides);
 
     const hasServices = result.services.some(service => service.rawName && service.price > 0);
     const hasItinerary = result.itinerary.some(item => item.location || item.date);
@@ -282,8 +287,12 @@ Có thể:
   }
 }
 
-function normalizeExtractionResult(parsedData: any, masterData: MasterData): ExtractionResult {
-  const general = buildGeneralInfo(parsedData, masterData);
+function normalizeExtractionResult(
+  parsedData: any,
+  masterData: MasterData,
+  generalOverrides?: Partial<ExtractionGeneralInfo>,
+): ExtractionResult {
+  const general = buildGeneralInfo(parsedData, masterData, generalOverrides);
   const services = buildServices(parsedData, general.pax);
   const itinerary = buildItinerary(parsedData);
   const otherExpenses = buildOtherExpenses(parsedData);
@@ -319,25 +328,75 @@ function normalizeExtractionResult(parsedData: any, masterData: MasterData): Ext
   return result;
 }
 
-function buildGeneralInfo(parsedData: any, masterData: MasterData): ExtractionResult["general"] {
+function buildGeneralInfo(
+  parsedData: any,
+  masterData: MasterData,
+  generalOverrides?: Partial<ExtractionGeneralInfo>,
+): ExtractionResult["general"] {
   const fallbackNationality = masterData.catalogs.nationalities[0] || "";
   const general = parsedData.general ?? {};
   const thongTin = parsedData.thong_tin_chung ?? {};
 
   const itineraryDates = extractDatesFromItinerary(parsedData);
 
-  return {
-    tourCode: general.tourCode ?? thongTin.ma_tour ?? "",
-    customerName: general.customerName ?? thongTin.ten_khach ?? "",
-    clientCompany: general.clientCompany ?? thongTin.ten_cong_ty ?? "",
-    nationality: general.nationality ?? thongTin.quoc_tich_khach ?? fallbackNationality,
+  const base: ExtractionGeneralInfo = {
+    tourCode: (general.tourCode ?? general.code ?? thongTin.ma_tour ?? "").trim(),
+    customerName: (general.customerName ?? thongTin.ten_khach ?? "").trim(),
+    clientCompany: (general.clientCompany ?? thongTin.ten_cong_ty ?? "").trim(),
+    nationality: (general.nationality ?? thongTin.quoc_tich_khach ?? fallbackNationality).trim(),
     pax: toNumber(general.pax ?? thongTin.so_luong_khach),
-    startDate: general.startDate ?? itineraryDates.startDate ?? "",
-    endDate: general.endDate ?? itineraryDates.endDate ?? "",
-    guideName: general.guideName ?? thongTin.ten_guide ?? "",
-    driverName: general.driverName ?? thongTin.ten_lai_xe ?? "",
-    notes: general.notes ?? "",
+    startDate:
+      normalizeDate(general.startDate ?? thongTin.ngay_bat_dau) ||
+      itineraryDates.startDate ||
+      "",
+    endDate:
+      normalizeDate(general.endDate ?? thongTin.ngay_ket_thuc) ||
+      itineraryDates.endDate ||
+      "",
+    guideName: (general.guideName ?? thongTin.ten_guide ?? "").trim(),
+    driverName: (general.driverName ?? thongTin.ten_lai_xe ?? "").trim(),
+    notes: (general.notes ?? "").trim(),
   };
+
+  if (!generalOverrides) {
+    return base;
+  }
+
+  const trimmed = (value: string | undefined) => value?.trim() ?? "";
+  const merged: ExtractionGeneralInfo = { ...base };
+
+  if (trimmed(generalOverrides.tourCode)) {
+    merged.tourCode = trimmed(generalOverrides.tourCode);
+  }
+  if (trimmed(generalOverrides.customerName)) {
+    merged.customerName = trimmed(generalOverrides.customerName);
+  }
+  if (trimmed(generalOverrides.clientCompany)) {
+    merged.clientCompany = trimmed(generalOverrides.clientCompany);
+  }
+  if (typeof generalOverrides.pax === "number" && Number.isFinite(generalOverrides.pax)) {
+    merged.pax = generalOverrides.pax;
+  }
+  if (trimmed(generalOverrides.nationality)) {
+    merged.nationality = trimmed(generalOverrides.nationality);
+  }
+  if (generalOverrides.startDate) {
+    merged.startDate = generalOverrides.startDate;
+  }
+  if (generalOverrides.endDate) {
+    merged.endDate = generalOverrides.endDate;
+  }
+  if (trimmed(generalOverrides.guideName)) {
+    merged.guideName = trimmed(generalOverrides.guideName);
+  }
+  if (trimmed(generalOverrides.driverName)) {
+    merged.driverName = trimmed(generalOverrides.driverName);
+  }
+  if (trimmed(generalOverrides.notes)) {
+    merged.notes = trimmed(generalOverrides.notes);
+  }
+
+  return merged;
 }
 
 function buildServices(parsedData: any, pax: number): ExtractionResult["services"] {

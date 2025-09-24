@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertTriangle,
+  FiBookOpen,
   FiCheckCircle,
   FiDownload,
   FiEdit,
@@ -8,6 +9,7 @@ import {
   FiFileText,
   FiInfo,
   FiRefreshCw,
+  FiSliders,
   FiUploadCloud,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +21,7 @@ import { useMasterData } from "../../contexts/MasterDataContext";
 import { useTours } from "../../contexts/TourContext";
 import type {
   Expense,
+  ExtractionGeneralInfo,
   ExtractionResult,
   FinancialSummary,
   MatchedService,
@@ -40,6 +43,75 @@ import { extractWithAI, loadApiKey, loadApiMode } from "../../services/aiExtract
 import { getLatestPrompt } from "../../services/promptService";
 import { generateId } from "../../utils/ids";
 import { groupServicesByItinerary } from "../../utils/itinerary";
+
+type GeneralOverridesFormState = {
+  tourCode: string;
+  customerName: string;
+  clientCompany: string;
+  nationality: string;
+  pax: string;
+  startDate: string;
+  endDate: string;
+  guideName: string;
+  driverName: string;
+  notes: string;
+};
+
+const extractionGeneralFieldDefinitions = [
+  {
+    key: "tourCode",
+    type: "string",
+    description: "Mã tour hoặc booking duy nhất cho đoàn khách.",
+  },
+  {
+    key: "customerName",
+    type: "string",
+    description: "Tên khách hàng chính hoặc trưởng đoàn.",
+  },
+  {
+    key: "clientCompany",
+    type: "string",
+    description: "Tên công ty/đơn vị đặt tour (tùy chọn).",
+    optional: true,
+  },
+  {
+    key: "nationality",
+    type: "string",
+    description: "Quốc tịch của đoàn khách theo danh mục chuẩn.",
+  },
+  {
+    key: "pax",
+    type: "number",
+    description: "Tổng số khách tham gia tour.",
+  },
+  {
+    key: "startDate",
+    type: "string (ISO)",
+    description: "Ngày bắt đầu tour theo định dạng ISO 8601.",
+  },
+  {
+    key: "endDate",
+    type: "string (ISO)",
+    description: "Ngày kết thúc tour theo định dạng ISO 8601.",
+  },
+  {
+    key: "guideName",
+    type: "string",
+    description: "Tên hướng dẫn viên xuất hiện trong tài liệu.",
+  },
+  {
+    key: "driverName",
+    type: "string",
+    description: "Tên tài xế hoặc đơn vị vận chuyển (tùy chọn).",
+    optional: true,
+  },
+  {
+    key: "notes",
+    type: "string",
+    description: "Ghi chú vận hành đặc biệt (tùy chọn).",
+    optional: true,
+  },
+] as const;
 
 const initialFinancialSummary: FinancialSummary = {
   advance: 0,
@@ -70,6 +142,19 @@ export const NewTourPage = () => {
     notes: "",
   });
 
+  const createInitialGeneralOverrides = (): GeneralOverridesFormState => ({
+    tourCode: "",
+    customerName: "",
+    clientCompany: "",
+    nationality: "",
+    pax: "",
+    startDate: "",
+    endDate: "",
+    guideName: "",
+    driverName: "",
+    notes: "",
+  });
+
   const [uploadSource, setUploadSource] = useState<
     { name: string; type: "image" | "json" }
   | null>(null);
@@ -90,6 +175,69 @@ export const NewTourPage = () => {
   );
   const [error, setError] = useState<string | null>(null);
   const [showVerification, setShowVerification] = useState(false);
+  const [generalOverridesForm, setGeneralOverridesForm] = useState<GeneralOverridesFormState>(
+    createInitialGeneralOverrides,
+  );
+
+  const generalOverrides = useMemo<Partial<ExtractionGeneralInfo>>(() => {
+    const overrides: Partial<ExtractionGeneralInfo> = {};
+    const trimmed = (value: string) => value.trim();
+
+    if (trimmed(generalOverridesForm.tourCode)) {
+      overrides.tourCode = trimmed(generalOverridesForm.tourCode);
+    }
+    if (trimmed(generalOverridesForm.customerName)) {
+      overrides.customerName = trimmed(generalOverridesForm.customerName);
+    }
+    if (trimmed(generalOverridesForm.clientCompany)) {
+      overrides.clientCompany = trimmed(generalOverridesForm.clientCompany);
+    }
+    if (generalOverridesForm.pax !== "") {
+      const parsed = Number(generalOverridesForm.pax);
+      if (!Number.isNaN(parsed)) {
+        overrides.pax = parsed;
+      }
+    }
+    if (generalOverridesForm.nationality) {
+      overrides.nationality = generalOverridesForm.nationality;
+    }
+    if (generalOverridesForm.startDate) {
+      const startIso = fromInputDateValue(generalOverridesForm.startDate);
+      overrides.startDate = startIso || generalOverridesForm.startDate;
+    }
+    if (generalOverridesForm.endDate) {
+      const endIso = fromInputDateValue(generalOverridesForm.endDate);
+      overrides.endDate = endIso || generalOverridesForm.endDate;
+    }
+    if (trimmed(generalOverridesForm.guideName)) {
+      overrides.guideName = trimmed(generalOverridesForm.guideName);
+    }
+    if (trimmed(generalOverridesForm.driverName)) {
+      overrides.driverName = trimmed(generalOverridesForm.driverName);
+    }
+    if (trimmed(generalOverridesForm.notes)) {
+      overrides.notes = trimmed(generalOverridesForm.notes);
+    }
+
+    return overrides;
+  }, [generalOverridesForm]);
+
+  const generalOverrideCount = useMemo(
+    () => Object.keys(generalOverrides).length,
+    [generalOverrides],
+  );
+  const hasGeneralOverrides = generalOverrideCount > 0;
+
+  const updateOverrideField = <K extends keyof GeneralOverridesFormState>(
+    field: K,
+    value: GeneralOverridesFormState[K],
+  ) => {
+    setGeneralOverridesForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const resetGeneralOverrides = () => {
+    setGeneralOverridesForm(createInitialGeneralOverrides());
+  };
 
   useEffect(() => {
     if (!uploadSource) {
@@ -122,6 +270,7 @@ export const NewTourPage = () => {
     setFinancials({ ...initialFinancialSummary });
     setRawExtractionResult(null);
     setShowVerification(false);
+    setGeneralOverridesForm(createInitialGeneralOverrides());
   };
 
   const isExtractionResult = (value: unknown): value is ExtractionResult => {
@@ -271,13 +420,14 @@ export const NewTourPage = () => {
   const executeExtraction = async () => {
     setProcessing(true);
     setError(null);
-    
+
     try {
       const apiMode = loadApiMode();
       const apiKey = loadApiKey();
-      
+      const overridesToUse = generalOverrideCount ? generalOverrides : undefined;
+
       let extraction: ExtractionResult;
-      
+
       if (apiMode === "live" && apiKey) {
         // Use real Gemini AI with latest prompt
         const file = imageInputRef.current?.files?.[0];
@@ -291,13 +441,19 @@ export const NewTourPage = () => {
           throw new Error("Không tìm thấy prompt nào. Vui lòng tạo prompt trước khi chạy trích xuất.");
         }
         
-        extraction = await extractWithAI(file, masterData, apiKey, latestPrompt.content);
+        extraction = await extractWithAI(
+          file,
+          masterData,
+          apiKey,
+          latestPrompt.content,
+          overridesToUse,
+        );
       } else {
         // Use mock data
         await new Promise((r) => setTimeout(r, 900));
-        extraction = simulateGeminiExtraction(masterData);
+        extraction = simulateGeminiExtraction(masterData, overridesToUse);
       }
-      
+
       applyExtraction(extraction);
     } catch (error) {
       console.error("Extraction failed:", error);
@@ -605,6 +761,160 @@ export const NewTourPage = () => {
                 <img src={imagePreview} alt={`Xem trước ${uploadSource?.name ?? "tệp đã tải"}`} />
               </div>
             )}
+            <div className="extraction-hints">
+              <div className="extraction-hints-header">
+                <div className="extraction-hints-title">
+                  <FiSliders /> Gợi ý thông tin chung cho Gemini
+                </div>
+                <p>
+                  Các trường dưới đây sẽ được truyền vào <code>buildGeneralInfo</code> để ưu tiên khi
+                  Gemini chuẩn hóa dữ liệu. Để trống nếu muốn AI tự suy luận từ hình ảnh.
+                </p>
+              </div>
+              <div className="extraction-hints-status">
+                <div className="extraction-hints-meta">
+                  <span className={`badge${hasGeneralOverrides ? "" : " neutral"}`}>
+                    {hasGeneralOverrides
+                      ? `${generalOverrideCount} trường gợi ý`
+                      : "Chưa có trường gợi ý"}
+                  </span>
+                  <small>Áp dụng cho lần chạy Gemini tiếp theo.</small>
+                </div>
+                <button
+                  type="button"
+                  className="ghost-button small"
+                  onClick={resetGeneralOverrides}
+                  disabled={!hasGeneralOverrides}
+                >
+                  Xóa gợi ý
+                </button>
+              </div>
+              <datalist id="guide-name-suggestions">
+                {masterData.guides.map((guide) => (
+                  <option key={guide.id} value={guide.name} />
+                ))}
+              </datalist>
+              <div className="form-grid extraction-grid">
+                <label>
+                  <span>Mã tour (tourCode)</span>
+                  <small>Ưu tiên sử dụng khi tài liệu không rõ mã tour.</small>
+                  <input
+                    value={generalOverridesForm.tourCode}
+                    onChange={(event) => updateOverrideField("tourCode", event.target.value)}
+                    placeholder="vd: SGN-DAD-2406"
+                  />
+                </label>
+                <label>
+                  <span>Khách hàng (customerName)</span>
+                  <small>Tên khách hoặc trưởng đoàn.</small>
+                  <input
+                    value={generalOverridesForm.customerName}
+                    onChange={(event) => updateOverrideField("customerName", event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Công ty khách hàng (clientCompany)</span>
+                  <small>Tên công ty/đơn vị đặt tour.</small>
+                  <input
+                    value={generalOverridesForm.clientCompany}
+                    onChange={(event) => updateOverrideField("clientCompany", event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Quốc tịch (nationality)</span>
+                  <small>Chọn từ danh mục quốc tịch chuẩn.</small>
+                  <select
+                    value={generalOverridesForm.nationality}
+                    onChange={(event) => updateOverrideField("nationality", event.target.value)}
+                  >
+                    <option value="">Không đặt trước</option>
+                    {masterData.catalogs.nationalities.map((nationality) => (
+                      <option key={nationality} value={nationality}>
+                        {nationality}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Số khách (pax)</span>
+                  <small>Nhập số lượng khách nếu đã biết.</small>
+                  <input
+                    type="number"
+                    min={0}
+                    value={generalOverridesForm.pax}
+                    onChange={(event) => updateOverrideField("pax", event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Hướng dẫn viên (guideName)</span>
+                  <small>Tên hướng dẫn viên xuất hiện trên tài liệu.</small>
+                  <input
+                    value={generalOverridesForm.guideName}
+                    onChange={(event) => updateOverrideField("guideName", event.target.value)}
+                    list="guide-name-suggestions"
+                    placeholder="vd: Cao Huu Tu"
+                  />
+                </label>
+                <label>
+                  <span>Tài xế (driverName)</span>
+                  <small>Tên tài xế hoặc đơn vị vận chuyển.</small>
+                  <input
+                    value={generalOverridesForm.driverName}
+                    onChange={(event) => updateOverrideField("driverName", event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Ngày bắt đầu (startDate)</span>
+                  <small>Ngày khởi hành dự kiến.</small>
+                  <input
+                    type="date"
+                    value={generalOverridesForm.startDate}
+                    onChange={(event) => updateOverrideField("startDate", event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Ngày kết thúc (endDate)</span>
+                  <small>Ngày kết thúc tour.</small>
+                  <input
+                    type="date"
+                    value={generalOverridesForm.endDate}
+                    onChange={(event) => updateOverrideField("endDate", event.target.value)}
+                  />
+                </label>
+                <label className="full-width">
+                  <span>Ghi chú (notes)</span>
+                  <small>Ghi chú đặc biệt, yêu cầu dịch vụ, lưu ý vận hành.</small>
+                  <textarea
+                    rows={2}
+                    value={generalOverridesForm.notes}
+                    onChange={(event) => updateOverrideField("notes", event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="extraction-reference">
+                <div className="extraction-reference-header">
+                  <div className="extraction-reference-title">
+                    <FiBookOpen /> Kiểu dữ liệu <code>ExtractionGeneralInfo</code>
+                  </div>
+                  <p>
+                    Đây là cấu trúc <code>general</code> trong <code>ExtractionResult</code> mà Gemini tạo
+                    ra sau khi chuẩn hóa.
+                  </p>
+                </div>
+                <div className="extraction-reference-grid">
+                  {extractionGeneralFieldDefinitions.map((field) => (
+                    <div key={field.key} className="extraction-reference-item">
+                      <div className="extraction-reference-item-header">
+                        <code>{field.key}</code>
+                        <span className="reference-type">{field.type}</span>
+                      </div>
+                      <p>{field.description}</p>
+                      {field.optional && <span className="badge neutral">Tùy chọn</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div className="upload-actions sticky-actions">
               <button
                 className="primary-button"
