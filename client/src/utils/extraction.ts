@@ -1,4 +1,5 @@
 import type {
+  ExtractionGeneralInfo,
   ExtractionResult,
   MasterData,
   MatchedService,
@@ -13,8 +14,54 @@ const normalize = (value: string) =>
     .replace(/\p{Diacritic}/gu, "")
     .trim();
 
+const mergeGeneralOverrides = (
+  base: ExtractionGeneralInfo,
+  overrides?: Partial<ExtractionGeneralInfo>,
+): ExtractionGeneralInfo => {
+  if (!overrides) {
+    return base;
+  }
+
+  const trimmed = (value: string | undefined) => value?.trim() ?? "";
+  const merged: ExtractionGeneralInfo = { ...base };
+
+  if (trimmed(overrides.tourCode)) {
+    merged.tourCode = trimmed(overrides.tourCode);
+  }
+  if (trimmed(overrides.customerName)) {
+    merged.customerName = trimmed(overrides.customerName);
+  }
+  if (trimmed(overrides.clientCompany)) {
+    merged.clientCompany = trimmed(overrides.clientCompany);
+  }
+  if (typeof overrides.pax === "number" && Number.isFinite(overrides.pax)) {
+    merged.pax = overrides.pax;
+  }
+  if (trimmed(overrides.nationality)) {
+    merged.nationality = trimmed(overrides.nationality);
+  }
+  if (overrides.startDate) {
+    merged.startDate = overrides.startDate;
+  }
+  if (overrides.endDate) {
+    merged.endDate = overrides.endDate;
+  }
+  if (trimmed(overrides.guideName)) {
+    merged.guideName = trimmed(overrides.guideName);
+  }
+  if (trimmed(overrides.driverName)) {
+    merged.driverName = trimmed(overrides.driverName);
+  }
+  if (trimmed(overrides.notes)) {
+    merged.notes = trimmed(overrides.notes);
+  }
+
+  return merged;
+};
+
 export const simulateGeminiExtraction = (
   _masterData: MasterData,
+  overrides?: Partial<ExtractionGeneralInfo>,
 ): ExtractionResult => {
   void _masterData;
   const today = new Date();
@@ -22,20 +69,22 @@ export const simulateGeminiExtraction = (
   const end = new Date(start);
   end.setDate(start.getDate() + 2);
 
+  const baseGeneral: ExtractionGeneralInfo = {
+    tourCode: `GEM-${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-0${start.getDate()}`,
+    customerName: "Lim Family",
+    clientCompany: "Asia Travel Partners",
+    pax: 4,
+    nationality: "Singapore",
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    guideName: "Tu",
+    driverName: "Mr. Phuc",
+    notes:
+      "Client requested vegetarian dinner option on day 2 and VIP queue for Ba Na cable car.",
+  };
+
   return {
-    general: {
-      tourCode: `GEM-${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-0${start.getDate()}`,
-      customerName: "Lim Family",
-      clientCompany: "Asia Travel Partners",
-      pax: 4,
-      nationality: "Singapore",
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      guideName: "Tu",
-      driverName: "Mr. Phuc",
-      notes:
-        "Client requested vegetarian dinner option on day 2 and VIP queue for Ba Na cable car.",
-    },
+    general: mergeGeneralOverrides(baseGeneral, overrides),
     services: [
       {
         rawName: "Bana Ticket",
