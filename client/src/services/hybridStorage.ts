@@ -4,7 +4,6 @@ import {
   setDoc,
   onSnapshot,
   serverTimestamp,
-  Timestamp,
   type DocumentSnapshot,
   type Unsubscribe,
   deleteDoc
@@ -160,7 +159,7 @@ class HybridStorageService {
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      const { _metadata, _updatedAt, ...masterData } = data;
+      const { _metadata, ...masterData } = data;
       
       if (_metadata) {
         this.saveSyncMetadata(_metadata as SyncMetadata);
@@ -227,23 +226,46 @@ class HybridStorageService {
     if (!this.isOnline) return;
 
     try {
-      const cloudData = await this.loadFromFirestore();
       const localData = this.loadFromLocalStorage();
+      const localMetadata = this.loadSyncMetadata();
 
-      if (cloudData && localData) {
-        // Simple conflict resolution: use newer data
-        const localTime = new Date(localData as any).getTime();
-        const cloudTime = new Date(cloudData as any).getTime();
+      const docRef = doc(db, COLLECTIONS.MASTER_DATA, this.deviceId);
+      const docSnap = await getDoc(docRef);
 
-        if (cloudTime > localTime) {
-          this.saveToLocalStorage(cloudData);
-        } else if (localTime > cloudTime) {
+      if (!docSnap.exists()) {
+        if (localData) {
           await this.saveToFirestore(localData);
         }
-      } else if (cloudData && !localData) {
+        return;
+      }
+
+      const payload = docSnap.data();
+      const { _metadata, ...masterData } = payload;
+      const cloudData = masterData as MasterData;
+      const cloudMetadata = (_metadata as SyncMetadata) ?? null;
+
+      if (localData) {
+        const localVersion = localMetadata?.version ?? 0;
+        const cloudVersion = cloudMetadata?.version ?? 0;
+
+        if (cloudVersion > localVersion) {
+          this.saveToLocalStorage(cloudData);
+          if (cloudMetadata) {
+            this.saveSyncMetadata(cloudMetadata);
+          }
+        } else if (localVersion > cloudVersion) {
+          await this.saveToFirestore(localData);
+        } else if (JSON.stringify(cloudData) !== JSON.stringify(localData)) {
+          this.saveToLocalStorage(cloudData);
+          if (cloudMetadata) {
+            this.saveSyncMetadata(cloudMetadata);
+          }
+        }
+      } else {
         this.saveToLocalStorage(cloudData);
-      } else if (localData && !cloudData) {
-        await this.saveToFirestore(localData);
+        if (cloudMetadata) {
+          this.saveSyncMetadata(cloudMetadata);
+        }
       }
     } catch (error) {
       console.warn("Background sync failed:", error);
@@ -261,7 +283,7 @@ class HybridStorageService {
       (docSnap: DocumentSnapshot) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const { _metadata, _updatedAt, ...masterData } = data;
+          const { _metadata, ...masterData } = data;
           
           // Only update if data is different from local
           const localData = this.loadFromLocalStorage();

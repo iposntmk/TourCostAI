@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+import { getAnalytics, type Analytics } from "firebase/analytics";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
 // Initialize Analytics (only in production)
-let analytics: any = null;
+let analytics: Analytics | null = null;
 if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
   analytics = getAnalytics(app);
 }
