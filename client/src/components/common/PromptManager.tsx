@@ -17,7 +17,7 @@ export const PromptManager = ({ onPromptChange }: PromptManagerProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
 
-  const loadLatestPrompt = useCallback(async (options?: { silent?: boolean }) => {
+  const loadLatestPrompt = useCallback(async (options?: { silent?: boolean; retry?: boolean }) => {
     if (options?.silent) {
       setRefreshing(true);
     } else {
@@ -32,6 +32,14 @@ export const PromptManager = ({ onPromptChange }: PromptManagerProps) => {
     } catch (error) {
       console.error("Error loading prompt:", error);
       setError(error instanceof Error ? error.message : "Không thể tải prompt mới nhất");
+      
+      // Retry once if this is not already a retry
+      if (!options?.retry) {
+        console.log("Retrying prompt load...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await loadLatestPrompt({ ...options, retry: true });
+      }
+      
       return null;
     } finally {
       if (options?.silent) {
@@ -51,7 +59,7 @@ export const PromptManager = ({ onPromptChange }: PromptManagerProps) => {
   };
 
   const handleEditPrompt = async () => {
-    const prompt = await loadLatestPrompt({ silent: true });
+    const prompt = await loadLatestPrompt({ silent: true, retry: true });
     if (!prompt) {
       setError("Không tìm thấy prompt để chỉnh sửa.");
       return;
@@ -67,7 +75,8 @@ export const PromptManager = ({ onPromptChange }: PromptManagerProps) => {
   };
 
   const handleModalSave = async () => {
-    await loadLatestPrompt({ silent: true });
+    // Force refresh with retry to ensure fresh data after save
+    await loadLatestPrompt({ retry: true });
     onPromptChange?.();
   };
 
