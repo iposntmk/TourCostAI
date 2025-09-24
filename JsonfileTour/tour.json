@@ -1,0 +1,66 @@
+{
+  "thông tin chung": {
+    "mã tour": "250703NalayiniSugirthan111530",
+    "tên công ty": "Asia Top Travel book",
+    "tên guide": null,
+    "tên khách": "Nalayini Sugirthan",
+    "quốc tịch khách": "Úc gốc Ấn & Srilanka",
+    "số lượng khách": "13 lớn + 1 trẻ 8 tuổi",
+    "tên lái xe": "Mr Đức",
+    "số điện thoại lái xe": "0903589004",
+    "các ngày tham quan": [
+      "6/7",
+      "7/7",
+      "8/7",
+      "9/7"
+    ]
+  },
+  "danh sách địa điểm và chi phí": [
+    {
+      "địa điểm": "Sân bay Đà Nẵng K6840-13.30"
+    },
+    {
+      "địa điểm": "Nhà hàng, động Âm Phủ"
+    },
+    {
+      "địa điểm": "Bana",
+      "chi phí": "ATT book-code?"
+    },
+    {
+      "địa điểm": "Alpines Coaster",
+      "chi phí": "HDV book 70k/p x 12"
+    },
+    {
+      "địa điểm": "Tham bien My Khe"
+    },
+    {
+      "địa điểm": "Tham quan Cẩm Thanh, đi thúng",
+      "chi phí": "Mr Day"
+    },
+    {
+      "địa điểm": "Đi Huế, hầm Hải Vân, Lăng Cô"
+    },
+    {
+      "địa điểm": "Thuyền thăm Thiên Mụ"
+    },
+    {
+      "địa điểm": "Tham quan Đại Nội, Tự Đức, làng nón, làng hương"
+    },
+    {
+      "địa điểm": "Tiễn sân bay Huế VN1544-18.20"
+    }
+  ],
+  "ăn": {
+    "ăn trưa": [
+      "Bana",
+      "Không Gian Xưa - 76 Lê Lợi",
+      "Không Gian Xưa - 98 Minh Mạng"
+    ],
+    "ăn tối": [
+      "Đạo Tiên",
+      "0",
+      "0"
+    ]
+  },
+  "tip": "Nhận từ văn phòng"
+}
