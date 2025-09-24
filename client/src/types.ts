@@ -117,6 +117,28 @@ export interface ExtractionGeneralInfo {
   notes?: string;
 }
 
+export interface GeneralOverridePreset {
+  id: string;
+  name: string;
+  tourCode?: string;
+  customerName?: string;
+  clientCompany?: string;
+  pax?: number | null;
+  nationality?: string;
+  startDate?: string;
+  endDate?: string;
+  guideName?: string;
+  driverName?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GeneralOverridePresetInput = Omit<
+  GeneralOverridePreset,
+  "id" | "createdAt" | "updatedAt"
+>;
+
 export interface ExtractionServiceCandidate {
   rawName: string;
   quantity: number;

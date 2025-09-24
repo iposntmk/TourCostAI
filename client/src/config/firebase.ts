@@ -31,7 +31,8 @@ export { analytics };
 export const COLLECTIONS = {
   MASTER_DATA: "masterData",
   TOURS: "tours",
-  SYNC_METADATA: "syncMetadata"
+  SYNC_METADATA: "syncMetadata",
+  GENERAL_OVERRIDES: "generalOverrides",
 } as const;
 
 // Sync metadata interface
