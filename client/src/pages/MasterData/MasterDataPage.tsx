@@ -299,6 +299,20 @@ export const MasterDataPage = () => {
     }
   };
 
+  const toCsvLine = (
+    values: Array<string | number | boolean | null | undefined>,
+  ) =>
+    values
+      .map((value) => {
+        if (value === null || value === undefined) {
+          return "";
+        }
+        const stringValue = String(value);
+        const escapedValue = stringValue.replace(/"/g, '""');
+        return /[",\n\r]/.test(stringValue) ? `"${escapedValue}"` : escapedValue;
+      })
+      .join(",");
+
   const exportToTextFile = (filename: string, lines: string[]) => {
     const content = lines.join("\n");
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -316,59 +330,77 @@ export const MasterDataPage = () => {
     const partnerLookup = new Map(
       masterData.partners.map((partner) => [partner.id, partner.name] as const),
     );
-    const header = "Tên dịch vụ\tDanh mục\tGiá\tĐơn vị\tĐối tác\tMô tả";
+    const header = toCsvLine([
+      "Tên dịch vụ",
+      "Danh mục",
+      "Giá",
+      "Đơn vị",
+      "Đối tác",
+      "Mô tả",
+    ]);
     const lines = masterData.services.map((service) => {
       const partnerName = service.partnerId
         ? partnerLookup.get(service.partnerId) ?? ""
         : "";
-      return [
+      return toCsvLine([
         service.name,
         service.category,
-        String(service.price),
+        service.price,
         service.unit,
         partnerName,
         service.description ?? "",
-      ].join("\t");
+      ]);
     });
     exportToTextFile("services.txt", [header, ...lines]);
   };
 
   const handleExportGuidesTxt = () => {
-    const header = "Tên\tĐiện thoại\tEmail\tNgôn ngữ";
+    const header = toCsvLine(["Tên", "Điện thoại", "Email", "Ngôn ngữ"]);
     const lines = masterData.guides.map((guide) =>
-      [
+      toCsvLine([
         guide.name,
         guide.phone ?? "",
         guide.email ?? "",
         (guide.languages ?? []).join(", "),
-      ].join("\t"),
+      ]),
     );
     exportToTextFile("guides.txt", [header, ...lines]);
   };
 
   const handleExportPartnersTxt = () => {
-    const header = "Tên\tNgười liên hệ\tĐiện thoại\tEmail\tĐịa chỉ";
+    const header = toCsvLine([
+      "Tên",
+      "Người liên hệ",
+      "Điện thoại",
+      "Email",
+      "Địa chỉ",
+    ]);
     const lines = masterData.partners.map((partner) =>
-      [
+      toCsvLine([
         partner.name,
         partner.contactName ?? "",
         partner.phone ?? "",
         partner.email ?? "",
         partner.address ?? "",
-      ].join("\t"),
+      ]),
     );
     exportToTextFile("partners.txt", [header, ...lines]);
   };
 
   const handleExportPerDiemTxt = () => {
-    const header = "Địa điểm\tMức phụ cấp\tTiền tệ\tGhi chú";
+    const header = toCsvLine([
+      "Địa điểm",
+      "Mức phụ cấp",
+      "Tiền tệ",
+      "Ghi chú",
+    ]);
     const lines = masterData.perDiemRates.map((rate) =>
-      [
+      toCsvLine([
         rate.location,
-        String(rate.rate),
+        rate.rate,
         rate.currency,
         rate.notes ?? "",
-      ].join("\t"),
+      ]),
     );
     exportToTextFile("per-diem.txt", [header, ...lines]);
   };
