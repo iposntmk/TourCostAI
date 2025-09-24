@@ -408,6 +408,14 @@
   align-items: start;
 }
 
+.new-tour-page .layout-two-column {
+  grid-template-columns: 1fr;
+}
+
+.new-tour-page .form-grid {
+  grid-template-columns: 1fr;
+}
+
 .upload-zone {
   display: flex;
   flex-direction: column;
