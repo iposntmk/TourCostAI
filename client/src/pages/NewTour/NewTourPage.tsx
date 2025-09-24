@@ -21,6 +21,7 @@ import { JsonViewer } from "../../components/common/JsonViewer";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { PromptManager } from "../../components/common/PromptManager";
 import { PromptConfirmationModal } from "../../components/common/PromptConfirmationModal";
+import { GeminiSuggestionsGrid } from "../../components/common/GeminiSuggestionsGrid";
 import { useMasterData } from "../../contexts/MasterDataContext";
 import { useTours } from "../../contexts/TourContext";
 import { useGeneralOverrides } from "../../contexts/GeneralOverridesContext";
@@ -925,16 +926,26 @@ export const NewTourPage = () => {
                 <img src={imagePreview} alt={`Xem trước ${uploadSource?.name ?? "tệp đã tải"}`} />
               </div>
             )}
-            <div className="extraction-hints">
-              <div className="extraction-hints-header">
-                <div className="extraction-hints-title">
-                  <FiSliders /> Gợi ý thông tin chung cho Gemini
-                </div>
-                <p>
-                  Các trường dưới đây sẽ được truyền vào <code>buildGeneralInfo</code> để ưu tiên khi
-                  Gemini chuẩn hóa dữ liệu. Để trống nếu muốn AI tự suy luận từ hình ảnh.
-                </p>
-              </div>
+            <GeminiSuggestionsGrid
+              suggestions={generalOverrides}
+              onUpdateSuggestions={(suggestions) => {
+                // Convert suggestions to form state
+                const newFormState: GeneralOverridesFormState = {
+                  tourCode: suggestions.tourCode || "",
+                  customerName: suggestions.customerName || "",
+                  clientCompany: suggestions.clientCompany || "",
+                  nationality: suggestions.nationality || "",
+                  pax: suggestions.pax?.toString() || "",
+                  startDate: suggestions.startDate ? toInputDateValue(suggestions.startDate) : "",
+                  endDate: suggestions.endDate ? toInputDateValue(suggestions.endDate) : "",
+                  guideName: suggestions.guideName || "",
+                  driverName: suggestions.driverName || "",
+                  notes: suggestions.notes || "",
+                };
+                setGeneralOverridesForm(newFormState);
+              }}
+              masterData={masterData}
+            />
               <div className="extraction-hints-controls">
                 <label className="extraction-hints-select">
                   <span>Tập gợi ý đang dùng</span>
