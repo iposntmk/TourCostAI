@@ -109,7 +109,7 @@ export const NewTourPage = () => {
         })),
       );
       setExtractionNotes(
-        `Google Gemini successfully parsed ${extraction.services.length} services and ${extraction.itinerary.length} itinerary days from the uploaded program.`,
+        `Google Gemini đã trích xuất thành công ${extraction.services.length} dịch vụ và ${extraction.itinerary.length} ngày lịch trình từ chương trình đã tải lên.`,
       );
       setProcessing(false);
     }, 900);
@@ -216,15 +216,15 @@ export const NewTourPage = () => {
 
   const handleCreateTour = () => {
     if (!general.code.trim()) {
-      setError("Tour code is required.");
+      setError("Yêu cầu nhập mã tour.");
       return;
     }
     if (!general.guideId) {
-      setError("Please assign a guide.");
+      setError("Vui lòng phân công hướng dẫn viên.");
       return;
     }
     if (!general.startDate || !general.endDate) {
-      setError("Start and end dates are mandatory.");
+      setError("Bắt buộc nhập ngày bắt đầu và kết thúc.");
       return;
     }
     setError(null);
@@ -245,7 +245,7 @@ export const NewTourPage = () => {
   };
 
   const processingMessage = processing
-    ? "Calling Google Gemini and applying Master Data rules..."
+    ? "Đang gọi Google Gemini và áp dụng các quy tắc từ Dữ liệu chuẩn..."
     : extractionNotes;
 
   const canConfirm = matches.length > 0 && !processing;
@@ -253,17 +253,17 @@ export const NewTourPage = () => {
   return (
     <div className="page-wrapper">
       <PageHeader
-        title="AI image intake"
-        description="Upload a photographed tour program and let Gemini extract, normalise and validate all the data against your Master Data catalogues."
+        title="Tiếp nhận hình ảnh bằng AI"
+        description="Tải ảnh chương trình tour và để Gemini trích xuất, chuẩn hóa và xác thực dữ liệu dựa trên các danh mục Dữ liệu chuẩn."
       />
       <div className="layout-two-column">
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">
-              <FiUploadCloud /> Upload itinerary imagery
+              <FiUploadCloud /> Tải hình ảnh lịch trình
             </div>
             <p className="panel-description">
-              Supported formats: JPG, PNG, PDF. The AI engine reads multi-page documents and detects prices, guides, services and notes.
+              Định dạng hỗ trợ: JPG, PNG, PDF. Công cụ AI đọc được tài liệu nhiều trang và nhận diện giá, hướng dẫn viên, dịch vụ cùng ghi chú.
             </p>
           </div>
           <div className="panel-body upload-zone">
@@ -277,8 +277,8 @@ export const NewTourPage = () => {
               <FiFilePlus size={36} />
               <span>
                 {fileName
-                  ? `Selected file: ${fileName}`
-                  : "Drag & drop or click to choose tour program images"}
+                  ? `Đã chọn tệp: ${fileName}`
+                  : "Kéo thả hoặc nhấp để chọn hình ảnh chương trình tour"}
               </span>
             </label>
             <div className="upload-actions">
@@ -287,7 +287,7 @@ export const NewTourPage = () => {
                 disabled={!fileName || processing}
                 onClick={handleRunExtraction}
               >
-                {processing ? <FiRefreshCw className="spin" /> : <FiUploadCloud />} Run Gemini extraction
+                {processing ? <FiRefreshCw className="spin" /> : <FiUploadCloud />} Chạy trích xuất Gemini
               </button>
               {fileName && (
                 <button
@@ -300,7 +300,7 @@ export const NewTourPage = () => {
                     setExtractionNotes(null);
                   }}
                 >
-                  Reset
+                  Đặt lại
                 </button>
               )}
             </div>
@@ -311,7 +311,7 @@ export const NewTourPage = () => {
             )}
             {corrections.length > 0 && !processing && (
               <div className="warning-banner">
-                <FiAlertTriangle /> {corrections.length} services were updated to match official pricing in Master Data.
+                <FiAlertTriangle /> {corrections.length} dịch vụ đã được cập nhật để khớp với giá chuẩn trong Dữ liệu chuẩn.
               </div>
             )}
             {error && (
@@ -325,26 +325,26 @@ export const NewTourPage = () => {
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">
-              <FiCheckCircle /> Verification & clean-up
+              <FiCheckCircle /> Xác minh & làm sạch
             </div>
             <p className="panel-description">
-              Review the normalised values before committing the tour to the operations database.
+              Kiểm tra lại các giá trị đã chuẩn hóa trước khi lưu tour vào hệ thống vận hành.
             </p>
           </div>
           <div className="panel-body">
             <div className="form-grid">
               <label>
-                <span>Tour code</span>
+                <span>Mã tour</span>
                 <input
                   value={general.code}
                   onChange={(event) =>
                     setGeneral((current) => ({ ...current, code: event.target.value }))
                   }
-                  placeholder="e.g. SGN-DAD-2406"
+                  placeholder="vd: SGN-DAD-2406"
                 />
               </label>
               <label>
-                <span>Customer</span>
+                <span>Khách hàng</span>
                 <input
                   value={general.customerName}
                   onChange={(event) =>
@@ -356,7 +356,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>Client company</span>
+                <span>Công ty khách hàng</span>
                 <input
                   value={general.clientCompany}
                   onChange={(event) =>
@@ -368,7 +368,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>Nationality</span>
+                <span>Quốc tịch</span>
                 <select
                   value={general.nationality}
                   onChange={(event) =>
@@ -386,7 +386,7 @@ export const NewTourPage = () => {
                 </select>
               </label>
               <label>
-                <span>Pax</span>
+                <span>Số khách</span>
                 <input
                   type="number"
                   min={0}
@@ -400,7 +400,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>Guide</span>
+                <span>Hướng dẫn viên</span>
                 <select
                   value={general.guideId}
                   onChange={(event) =>
@@ -410,7 +410,7 @@ export const NewTourPage = () => {
                     }))
                   }
                 >
-                  <option value="">Select guide</option>
+                  <option value="">Chọn hướng dẫn viên</option>
                   {masterData.guides.map((guide) => (
                     <option key={guide.id} value={guide.id}>
                       {guide.name}
@@ -419,7 +419,7 @@ export const NewTourPage = () => {
                 </select>
               </label>
               <label>
-                <span>Driver</span>
+                <span>Tài xế</span>
                 <input
                   value={general.driverName}
                   onChange={(event) =>
@@ -431,7 +431,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>Start date</span>
+                <span>Ngày bắt đầu</span>
                 <input
                   type="date"
                   value={toInputDateValue(general.startDate)}
@@ -444,7 +444,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>End date</span>
+                <span>Ngày kết thúc</span>
                 <input
                   type="date"
                   value={toInputDateValue(general.endDate)}
@@ -458,7 +458,7 @@ export const NewTourPage = () => {
               </label>
             </div>
             <label className="full-width">
-              <span>Operational notes</span>
+              <span>Ghi chú vận hành</span>
               <textarea
                 rows={3}
                 value={general.notes}
@@ -471,17 +471,17 @@ export const NewTourPage = () => {
               />
             </label>
 
-            <h3 className="section-title">AI-detected services</h3>
+            <h3 className="section-title">Dịch vụ do AI phát hiện</h3>
             <div className="table-responsive">
               <table className="data-table compact">
                 <thead>
                   <tr>
-                    <th>Source service</th>
-                    <th>Master Data match</th>
-                    <th>Qty</th>
-                    <th>Doc price</th>
-                    <th>Master price</th>
-                    <th>Status</th>
+                    <th>Dịch vụ nguồn</th>
+                    <th>Khớp Dữ liệu chuẩn</th>
+                    <th>SL</th>
+                    <th>Giá trong tài liệu</th>
+                    <th>Giá chuẩn</th>
+                    <th>Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -502,7 +502,7 @@ export const NewTourPage = () => {
                             handleServiceSelect(index, event.target.value)
                           }
                         >
-                          <option value="">No match</option>
+                          <option value="">Không khớp</option>
                           {masterData.services.map((service) => (
                             <option key={service.id} value={service.id}>
                               {service.name}
@@ -538,8 +538,8 @@ export const NewTourPage = () => {
                           }`}
                         >
                           {Math.abs(match.discrepancy) > 0.5
-                            ? `Updated by ${match.discrepancy.toLocaleString("vi-VN")}`
-                            : "Aligned"}
+                            ? `Chênh lệch ${match.discrepancy.toLocaleString("vi-VN")}`
+                            : "Khớp"}
                         </span>
                       </td>
                     </tr>
@@ -550,13 +550,13 @@ export const NewTourPage = () => {
 
             {itinerary.length > 0 && (
               <div className="itinerary-preview">
-                <h3 className="section-title">Itinerary preview</h3>
+                <h3 className="section-title">Xem trước lịch trình</h3>
                 <ul>
                   {itinerary.map((item) => (
                     <li key={item.id}>
                       <div className="itinerary-preview-day">
                         <div className="itinerary-preview-header">
-                          <span className="badge">Day {item.day}</span>
+                          <span className="badge">Ngày {item.day}</span>
                           <span>{formatDate(item.date)}</span>
                         </div>
                         <div className="itinerary-preview-body">
@@ -570,15 +570,15 @@ export const NewTourPage = () => {
               </div>
             )}
 
-            <h3 className="section-title">Other expenses</h3>
+            <h3 className="section-title">Chi phí khác</h3>
             <div className="table-responsive">
               <table className="data-table compact">
                 <thead>
                   <tr>
-                    <th>Description</th>
-                    <th>Amount (VND)</th>
-                    <th>Date</th>
-                    <th>Notes</th>
+                    <th>Mô tả</th>
+                    <th>Số tiền (VND)</th>
+                    <th>Ngày</th>
+                    <th>Ghi chú</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -625,7 +625,7 @@ export const NewTourPage = () => {
                           className="ghost-button"
                           onClick={() => handleRemoveExpense(expense.id)}
                         >
-                          Remove
+                          Xóa
                         </button>
                       </td>
                     </tr>
@@ -634,13 +634,13 @@ export const NewTourPage = () => {
               </table>
             </div>
             <button className="ghost-button" onClick={handleAddExpense}>
-              Add expense
+              Thêm chi phí
             </button>
 
-            <h3 className="section-title">Financial summary</h3>
+            <h3 className="section-title">Tổng kết tài chính</h3>
             <div className="form-grid">
               <label>
-                <span>Advance</span>
+                <span>Tạm ứng</span>
                 <input
                   type="number"
                   min={0}
@@ -654,7 +654,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>Collections for company</span>
+                <span>Thu hộ công ty</span>
                 <input
                   type="number"
                   min={0}
@@ -668,7 +668,7 @@ export const NewTourPage = () => {
                 />
               </label>
               <label>
-                <span>Company tip</span>
+                <span>Tiền tip công ty</span>
                 <input
                   type="number"
                   min={0}
@@ -689,7 +689,7 @@ export const NewTourPage = () => {
                 disabled={!canConfirm}
                 onClick={handleCreateTour}
               >
-                Confirm and create tour
+                Xác nhận và tạo tour
               </button>
             </div>
           </div>

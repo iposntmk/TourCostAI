@@ -3,9 +3,9 @@ import { FiMenu, FiX } from "react-icons/fi";
 import { NavLink, useLocation } from "react-router-dom";
 
 const navItems = [
-  { to: "/", label: "Dashboard" },
-  { to: "/new", label: "AI Intake" },
-  { to: "/master-data", label: "Master Data" },
+  { to: "/", label: "Trang tổng quan" },
+  { to: "/new", label: "Nhập liệu AI" },
+  { to: "/master-data", label: "Dữ liệu chuẩn" },
 ];
 
 export const AppLayout = ({ children }: { children: ReactNode }) => {
@@ -23,12 +23,12 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
           <span className="brand-badge">AI</span>
           <div>
             <div className="brand-title">TourCost Intelligence</div>
-            <div className="brand-subtitle">Smart tour automation & auditing</div>
+            <div className="brand-subtitle">Tự động hóa và kiểm tra tour thông minh</div>
           </div>
         </div>
         <button
           type="button"
-          aria-label="Toggle navigation"
+          aria-label="Mở/đóng điều hướng"
           className="nav-toggle"
           onClick={() => setMenuOpen((value) => !value)}
         >

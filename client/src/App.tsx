@@ -12,8 +12,8 @@ const NotFound = () => (
   <div className="page-wrapper">
     <div className="panel">
       <div className="panel-body">
-        <h1>Page not found</h1>
-        <p>The page you were looking for does not exist.</p>
+        <h1>Không tìm thấy trang</h1>
+        <p>Trang bạn đang tìm kiếm không tồn tại.</p>
       </div>
     </div>
   </div>

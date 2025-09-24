@@ -74,69 +74,69 @@ export const Dashboard = () => {
         (guideItem) => guideItem.id === tour.general.guideId,
       );
       return {
-        "Tour Code": tour.general.code,
-        Customer: tour.general.customerName,
-        Company: tour.general.clientCompany ?? "",
-        Nationality: tour.general.nationality,
-        Pax: tour.general.pax,
-        "Start Date": formatDate(tour.general.startDate),
-        "End Date": formatDate(tour.general.endDate),
-        Guide: guide?.name ?? "",
-        "Service Total": calculateServiceTotal(tour.services),
-        "Other Expenses": calculateOtherExpenseTotal(tour.otherExpenses),
-        "Per Diem": tour.perDiem.reduce((sum, item) => sum + item.total, 0),
-        "Total Cost": tour.financials.totalCost,
-        "Difference To Advance": tour.financials.differenceToAdvance,
+        "Mã tour": tour.general.code,
+        "Khách hàng": tour.general.customerName,
+        "Công ty": tour.general.clientCompany ?? "",
+        "Quốc tịch": tour.general.nationality,
+        "Khách": tour.general.pax,
+        "Ngày bắt đầu": formatDate(tour.general.startDate),
+        "Ngày kết thúc": formatDate(tour.general.endDate),
+        "Hướng dẫn viên": guide?.name ?? "",
+        "Tổng dịch vụ": calculateServiceTotal(tour.services),
+        "Chi phí khác": calculateOtherExpenseTotal(tour.otherExpenses),
+        "Phụ cấp": tour.perDiem.reduce((sum, item) => sum + item.total, 0),
+        "Tổng chi phí": tour.financials.totalCost,
+        "Chênh lệch với tạm ứng": tour.financials.differenceToAdvance,
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Tours");
-    XLSX.writeFile(workbook, "tour-report.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách tour");
+    XLSX.writeFile(workbook, "bao-cao-tour.xlsx");
   };
 
   return (
     <div className="page-wrapper">
       <PageHeader
-        title="Operations dashboard"
-        description="Monitor current tours, discrepancies corrected by the AI engine, and financial outcomes."
+        title="Bảng điều hành"
+        description="Theo dõi các tour hiện tại, chênh lệch đã được AI điều chỉnh và kết quả tài chính."
         actions={
-          <button className="primary-button" onClick={() => navigate("/new")}>
-            <FiPlus /> New tour
+          <button className="primary-button" onClick={() => navigate("/new")}> 
+            <FiPlus /> Tour mới
           </button>
         }
       />
       <div className="stats-grid">
         <StatCard
-          label="Active tours"
+          label="Tour đang hoạt động"
           value={String(filteredTours.length)}
-          trend={`of ${tours.length} in database`}
+          trend={`trong tổng số ${tours.length} tour trong dữ liệu`}
           icon={<FiFilter />}
           accent="blue"
         />
         <StatCard
-          label="Upcoming departures"
+          label="Chuyến khởi hành sắp tới"
           value={String(upcomingTours.length)}
           trend={
             upcomingTours[0]
-              ? `Next: ${formatDate(upcomingTours[0].general.startDate)}`
-              : "No upcoming tours"
+              ? `Chuyến tiếp theo: ${formatDate(upcomingTours[0].general.startDate)}`
+              : "Không có tour sắp khởi hành"
           }
           icon={<FiCalendar />}
           accent="green"
         />
         <StatCard
-          label="Total spend"
+          label="Tổng chi"
           value={formatCurrency(totalSpend)}
-          trend="Aggregated cost incl. per diem"
+          trend="Tổng chi bao gồm phụ cấp"
           icon={<FiDownload />}
           accent="purple"
         />
         <StatCard
-          label="Price corrections"
+          label="Điều chỉnh giá"
           value={String(totalCorrections)}
-          trend="Services normalized by Master Data"
+          trend="Dịch vụ đã chuẩn hóa theo Dữ liệu chuẩn"
           icon={<FiSearch />}
           accent="orange"
         />
@@ -145,30 +145,30 @@ export const Dashboard = () => {
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title">
-            <FiFilter /> Filters
+            <FiFilter /> Bộ lọc
           </div>
           <div className="filter-grid">
             <div className="filter-field">
-              <label htmlFor="search">Search</label>
+              <label htmlFor="search">Tìm kiếm</label>
               <div className="input-with-icon">
                 <FiSearch />
                 <input
                   id="search"
                   type="search"
                   value={searchTerm}
-                  placeholder="Tour code, customer, company"
+                  placeholder="Mã tour, khách hàng, công ty"
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
             </div>
             <div className="filter-field">
-              <label htmlFor="guide">Guide</label>
+              <label htmlFor="guide">Hướng dẫn viên</label>
               <select
                 id="guide"
                 value={guideFilter}
                 onChange={(event) => setGuideFilter(event.target.value)}
               >
-                <option value="all">All guides</option>
+                <option value="all">Tất cả hướng dẫn viên</option>
                 {masterData.guides.map((guide) => (
                   <option key={guide.id} value={guide.id}>
                     {guide.name}
@@ -177,7 +177,7 @@ export const Dashboard = () => {
               </select>
             </div>
             <div className="filter-field">
-              <label htmlFor="from">From</label>
+              <label htmlFor="from">Từ ngày</label>
               <input
                 id="from"
                 type="date"
@@ -186,7 +186,7 @@ export const Dashboard = () => {
               />
             </div>
             <div className="filter-field">
-              <label htmlFor="to">To</label>
+              <label htmlFor="to">Đến ngày</label>
               <input
                 id="to"
                 type="date"
@@ -195,7 +195,7 @@ export const Dashboard = () => {
               />
             </div>
             <button className="ghost-button" onClick={handleExport}>
-              <FiDownload /> Export Excel
+              <FiDownload /> Xuất Excel
             </button>
           </div>
         </div>
@@ -205,10 +205,10 @@ export const Dashboard = () => {
               <thead>
                 <tr>
                   <th>Tour</th>
-                  <th>Dates</th>
-                  <th>Guide</th>
-                  <th>Financial summary</th>
-                  <th>Corrections</th>
+                  <th>Ngày</th>
+                  <th>Hướng dẫn viên</th>
+                  <th>Tổng quan tài chính</th>
+                  <th>Điều chỉnh</th>
                   <th></th>
                 </tr>
               </thead>
@@ -216,7 +216,7 @@ export const Dashboard = () => {
                 {filteredTours.length === 0 && (
                   <tr>
                     <td colSpan={6} className="empty-state">
-                      No tours match the current filters.
+                      Không có tour nào phù hợp với bộ lọc hiện tại.
                     </td>
                   </tr>
                 )}
@@ -233,7 +233,7 @@ export const Dashboard = () => {
                         <div className="table-primary">
                           <div className="table-title">{tour.general.code}</div>
                           <div className="table-subtitle">
-                            {tour.general.customerName} · {tour.general.pax} pax
+                            {tour.general.customerName} · {tour.general.pax} khách
                           </div>
                         </div>
                       </td>
@@ -241,27 +241,27 @@ export const Dashboard = () => {
                         <div className="table-primary">
                           <div>{formatDate(tour.general.startDate)}</div>
                           <div className="table-subtitle">
-                            to {formatDate(tour.general.endDate)}
+                            đến {formatDate(tour.general.endDate)}
                           </div>
                         </div>
                       </td>
                       <td>
                         <div className="table-primary">
-                          <div>{guide?.name ?? "Unassigned"}</div>
-                          <div className="table-subtitle">Driver: {tour.general.driverName}</div>
+                          <div>{guide?.name ?? "Chưa phân công"}</div>
+                          <div className="table-subtitle">Tài xế: {tour.general.driverName}</div>
                         </div>
                       </td>
                       <td>
                         <div className="table-primary">
                           <div>{formatCurrency(tour.financials.totalCost)}</div>
                           <div className="table-subtitle">
-                            Advance: {formatCurrency(tour.financials.advance)}
+                            Tạm ứng: {formatCurrency(tour.financials.advance)}
                           </div>
                         </div>
                       </td>
                       <td>
                         <span className={`tag ${corrections.length ? "warning" : "success"}`}>
-                          {corrections.length ? `${corrections.length} adjusted` : "All matched"}
+                          {corrections.length ? `${corrections.length} điều chỉnh` : "Tất cả khớp"}
                         </span>
                       </td>
                       <td>
@@ -269,7 +269,7 @@ export const Dashboard = () => {
                           className="ghost-button"
                           onClick={() => navigate(`/tour/${tour.id}`)}
                         >
-                          View
+                          Xem
                         </button>
                       </td>
                     </tr>
