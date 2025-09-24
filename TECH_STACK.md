@@ -1,6 +1,7 @@
-# Công nghệ, thư viện và cách lưu trữ của ứng dụng
+
 
 ## Công nghệ & công cụ build
+
 - Ứng dụng front-end được dựng bằng **Vite 7** kết hợp plugin `@vitejs/plugin-react`, chạy trên **React 19.0.0** và **TypeScript ^5.8.0**.
 - Bộ công cụ phát triển gồm **ESLint 9**, `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals` để lint mã TypeScript/React trong quá trình build.
 - Phiên bản chi tiết các dependency được cố định trong `package-lock.json` để đảm bảo tái lập môi trường.
@@ -34,3 +35,4 @@
   ```bash
   npm run build
   ```
+
