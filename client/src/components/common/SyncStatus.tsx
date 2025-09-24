@@ -1,4 +1,4 @@
-import { FiWifi, FiWifiOff, FiRefreshCw, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
+import { FiWifiOff, FiRefreshCw, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
 import { useMasterData } from "../../contexts/MasterDataContext";
 
 export const SyncStatus = () => {

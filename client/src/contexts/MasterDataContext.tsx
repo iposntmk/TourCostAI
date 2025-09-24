@@ -39,11 +39,6 @@ export interface MasterDataContextValue {
   findGuideByName: (query: string) => Guide | undefined;
   forceSync: () => Promise<void>;
   clearAllData: () => Promise<void>;
-  updateMasterDataBatch: (data: Partial<MasterData>) => void;
-  addServicesBatch: (services: Omit<Service, "id">[]) => void;
-  addGuidesBatch: (guides: Omit<Guide, "id">[]) => void;
-  addPartnersBatch: (partners: Omit<Partner, "id">[]) => void;
-  addPerDiemRatesBatch: (rates: Omit<PerDiemRate, "id">[]) => void;
 }
 
 const MasterDataContext = createContext<MasterDataContextValue | undefined>(
@@ -301,58 +296,6 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateMasterDataBatch = async (data: Partial<MasterData>) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      ...data,
-    }));
-    setMasterData(newData);
-  };
-
-  const addServicesBatch = async (services: Omit<Service, "id">[]) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      services: [
-        ...current.services,
-        ...services.map(service => ({ ...service, id: generateId() })),
-      ],
-    }));
-    setMasterData(newData);
-  };
-
-  const addGuidesBatch = async (guides: Omit<Guide, "id">[]) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      guides: [
-        ...current.guides,
-        ...guides.map(guide => ({ ...guide, id: generateId() })),
-      ],
-    }));
-    setMasterData(newData);
-  };
-
-  const addPartnersBatch = async (partners: Omit<Partner, "id">[]) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      partners: [
-        ...current.partners,
-        ...partners.map(partner => ({ ...partner, id: generateId() })),
-      ],
-    }));
-    setMasterData(newData);
-  };
-
-  const addPerDiemRatesBatch = async (rates: Omit<PerDiemRate, "id">[]) => {
-    const newData = await updateMasterData(masterData, (current) => ({
-      ...current,
-      perDiemRates: [
-        ...current.perDiemRates,
-        ...rates.map(rate => ({ ...rate, id: generateId() })),
-      ],
-    }));
-    setMasterData(newData);
-  };
-
   const value: MasterDataContextValue = {
     masterData,
     syncStatus,
@@ -376,11 +319,6 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     findGuideByName,
     forceSync,
     clearAllData,
-    updateMasterDataBatch,
-    addServicesBatch,
-    addGuidesBatch,
-    addPartnersBatch,
-    addPerDiemRatesBatch,
   };
 
   return (
