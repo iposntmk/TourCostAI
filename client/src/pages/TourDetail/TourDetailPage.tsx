@@ -27,12 +27,12 @@ import {
 import { generateId } from "../../utils/ids";
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: "general", label: "General info" },
-  { key: "perDiem", label: "Per diem" },
-  { key: "itinerary", label: "Itinerary & locations" },
-  { key: "costs", label: "Tour costs" },
-  { key: "otherExpenses", label: "Other expenses" },
-  { key: "summary", label: "Summary & financials" },
+  { key: "general", label: "Thông tin chung" },
+  { key: "perDiem", label: "Phụ cấp" },
+  { key: "itinerary", label: "Lịch trình & địa điểm" },
+  { key: "costs", label: "Chi phí tour" },
+  { key: "otherExpenses", label: "Chi phí khác" },
+  { key: "summary", label: "Tổng kết & tài chính" },
 ];
 
 const cloneTour = (tour: Tour): Tour => ({
@@ -50,19 +50,22 @@ const cloneTour = (tour: Tour): Tour => ({
 
 const validationRules = (tour: Tour) => {
   const errors: string[] = [];
-  if (!tour.general.code.trim()) errors.push("Tour code is required");
+  if (!tour.general.code.trim()) errors.push("Yêu cầu nhập mã tour");
   if (!tour.general.customerName.trim())
-    errors.push("Customer name cannot be empty");
-  if (!tour.general.guideId) errors.push("A guide must be assigned");
+    errors.push("Tên khách hàng không được để trống");
+  if (!tour.general.guideId) errors.push("Phải phân công hướng dẫn viên");
   if (!tour.general.startDate || !tour.general.endDate)
-    errors.push("Start and end dates are mandatory");
-  if (tour.general.pax < 0) errors.push("Pax cannot be negative");
+    errors.push("Bắt buộc nhập ngày bắt đầu và kết thúc");
+  if (tour.general.pax < 0) errors.push("Số khách không được âm");
   tour.services.forEach((service) => {
-    if (service.quantity < 0) errors.push(`${service.description}: quantity cannot be negative`);
-    if (service.unitPrice < 0) errors.push(`${service.description}: price must be positive`);
+    if (service.quantity < 0)
+      errors.push(`${service.description}: số lượng không được âm`);
+    if (service.unitPrice < 0)
+      errors.push(`${service.description}: đơn giá phải lớn hơn 0`);
   });
   tour.otherExpenses.forEach((expense) => {
-    if (expense.amount < 0) errors.push(`${expense.description || "Expense"}: amount must be positive`);
+    if (expense.amount < 0)
+      errors.push(`${expense.description || "Chi phí"}: số tiền phải lớn hơn 0`);
   });
   return errors;
 };
@@ -81,12 +84,12 @@ export const TourDetailPage = () => {
   if (!tour) {
     return (
       <div className="page-wrapper">
-        <PageHeader title="Tour not found" />
+        <PageHeader title="Không tìm thấy tour" />
         <div className="panel">
           <div className="panel-body">
-            <p>The requested tour could not be located. It may have been deleted.</p>
+            <p>Không thể tìm thấy tour yêu cầu. Có thể tour đã bị xóa.</p>
             <button className="primary-button" onClick={() => navigate("/")}>
-              <FiArrowLeft /> Back to dashboard
+              <FiArrowLeft /> Quay lại trang tổng quan
             </button>
           </div>
         </div>
@@ -234,7 +237,7 @@ export const TourDetailPage = () => {
   };
 
   const handleDelete = () => {
-    if (window.confirm("Delete this tour permanently?")) {
+    if (window.confirm("Bạn có chắc muốn xóa tour này vĩnh viễn?")) {
       deleteTour(tour.id);
       navigate("/");
     }
@@ -249,7 +252,7 @@ export const TourDetailPage = () => {
   const renderGeneral = () => (
     <div className="detail-grid">
       <div className="detail-item">
-        <span className="detail-label">Tour code</span>
+        <span className="detail-label">Mã tour</span>
         {editMode ? (
           <input
             value={displayTour.general.code}
@@ -261,7 +264,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Customer</span>
+        <span className="detail-label">Khách hàng</span>
         {editMode ? (
           <input
             value={displayTour.general.customerName}
@@ -275,7 +278,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Client company</span>
+        <span className="detail-label">Công ty khách hàng</span>
         {editMode ? (
           <input
             value={displayTour.general.clientCompany ?? ""}
@@ -291,7 +294,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Nationality</span>
+        <span className="detail-label">Quốc tịch</span>
         {editMode ? (
           <select
             value={displayTour.general.nationality}
@@ -310,7 +313,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Pax</span>
+        <span className="detail-label">Số khách</span>
         {editMode ? (
           <input
             type="number"
@@ -325,7 +328,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Guide</span>
+        <span className="detail-label">Hướng dẫn viên</span>
         {editMode ? (
           <select
             value={displayTour.general.guideId}
@@ -333,7 +336,7 @@ export const TourDetailPage = () => {
               handleGeneralChange("guideId", event.target.value)
             }
           >
-            <option value="">Select guide</option>
+            <option value="">Chọn hướng dẫn viên</option>
             {masterData.guides.map((guideItem) => (
               <option key={guideItem.id} value={guideItem.id}>
                 {guideItem.name}
@@ -341,11 +344,11 @@ export const TourDetailPage = () => {
             ))}
           </select>
         ) : (
-          <span className="detail-value">{guide?.name ?? "Unassigned"}</span>
+          <span className="detail-value">{guide?.name ?? "Chưa phân công"}</span>
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Driver</span>
+        <span className="detail-label">Tài xế</span>
         {editMode ? (
           <input
             value={displayTour.general.driverName}
@@ -359,7 +362,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">Start date</span>
+        <span className="detail-label">Ngày bắt đầu</span>
         {editMode ? (
           <input
             type="date"
@@ -373,7 +376,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item">
-        <span className="detail-label">End date</span>
+        <span className="detail-label">Ngày kết thúc</span>
         {editMode ? (
           <input
             type="date"
@@ -387,7 +390,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="detail-item detail-notes">
-        <span className="detail-label">Notes</span>
+        <span className="detail-label">Ghi chú</span>
         {editMode ? (
           <textarea
             rows={3}
@@ -409,10 +412,10 @@ export const TourDetailPage = () => {
       <table className="data-table compact">
         <thead>
           <tr>
-            <th>Location</th>
-            <th>Days</th>
-            <th>Rate</th>
-            <th>Total</th>
+            <th>Địa điểm</th>
+            <th>Số ngày</th>
+            <th>Mức phụ cấp</th>
+            <th>Tổng</th>
           </tr>
         </thead>
         <tbody>
@@ -427,7 +430,7 @@ export const TourDetailPage = () => {
         </tbody>
       </table>
       <p className="panel-description">
-        Per diem allowances are automatically calculated using the latest Master Data rates.
+        Phụ cấp được tính tự động dựa trên mức giá mới nhất trong Dữ liệu chuẩn.
       </p>
     </div>
   );
@@ -437,7 +440,7 @@ export const TourDetailPage = () => {
       {displayTour.itinerary.map((item) => (
         <div key={item.id} className="itinerary-card">
           <div className="itinerary-card-header">
-            <span className="badge">Day {item.day}</span>
+            <span className="badge">Ngày {item.day}</span>
             {editMode ? (
               <input
                 type="date"
@@ -488,12 +491,12 @@ export const TourDetailPage = () => {
       <table className="data-table">
         <thead>
           <tr>
-            <th>Service</th>
-            <th>Quantity</th>
-            <th>Unit price</th>
-            <th>Document price</th>
-            <th>Discrepancy</th>
-            <th>Notes</th>
+            <th>Dịch vụ</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Giá theo tài liệu</th>
+            <th>Chênh lệch</th>
+            <th>Ghi chú</th>
           </tr>
         </thead>
         <tbody>
@@ -539,10 +542,10 @@ export const TourDetailPage = () => {
                     ? `${service.discrepancy > 0 ? "+" : ""}${formatCurrency(
                         service.discrepancy,
                       )}`
-                    : "Aligned"}
-                </span>
-              </td>
-              <td>
+                  : "Khớp"}
+              </span>
+            </td>
+            <td>
                 {editMode ? (
                   <input
                     value={service.notes ?? ""}
@@ -570,10 +573,10 @@ export const TourDetailPage = () => {
         <table className="data-table compact">
           <thead>
             <tr>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Notes</th>
+              <th>Mô tả</th>
+              <th>Số tiền</th>
+              <th>Ngày</th>
+              <th>Ghi chú</th>
               <th></th>
             </tr>
           </thead>
@@ -639,7 +642,7 @@ export const TourDetailPage = () => {
                       className="ghost-button"
                       onClick={() => handleRemoveExpense(expense.id)}
                     >
-                      Remove
+                      Xóa
                     </button>
                   )}
                 </td>
@@ -650,7 +653,7 @@ export const TourDetailPage = () => {
       </div>
       {editMode && (
         <button className="ghost-button" onClick={handleAddExpense}>
-          Add expense
+          Thêm chi phí
         </button>
       )}
     </div>
@@ -659,7 +662,7 @@ export const TourDetailPage = () => {
   const renderSummary = () => (
     <div className="summary-grid">
       <div className="summary-card">
-        <span className="detail-label">Advance</span>
+        <span className="detail-label">Tạm ứng</span>
         {editMode ? (
           <input
             type="number"
@@ -674,7 +677,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="summary-card">
-        <span className="detail-label">Collections for company</span>
+        <span className="detail-label">Thu hộ công ty</span>
         {editMode ? (
           <input
             type="number"
@@ -689,7 +692,7 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="summary-card">
-        <span className="detail-label">Company tip</span>
+        <span className="detail-label">Tiền tip công ty</span>
         {editMode ? (
           <input
             type="number"
@@ -704,29 +707,29 @@ export const TourDetailPage = () => {
         )}
       </div>
       <div className="summary-card">
-        <span className="detail-label">Services total</span>
+        <span className="detail-label">Tổng dịch vụ</span>
         <strong>{formatCurrency(totalServices)}</strong>
       </div>
       <div className="summary-card">
-        <span className="detail-label">Per diem total</span>
+        <span className="detail-label">Tổng phụ cấp</span>
         <strong>{formatCurrency(totalPerDiem)}</strong>
       </div>
       <div className="summary-card">
-        <span className="detail-label">Other expenses</span>
+        <span className="detail-label">Chi phí khác</span>
         <strong>{formatCurrency(totalOtherExpenses)}</strong>
       </div>
       <div className="summary-card accent">
-        <span className="detail-label">Total cost</span>
+        <span className="detail-label">Tổng chi phí</span>
         <strong>{formatCurrency(displayTour.financials.totalCost)}</strong>
       </div>
       <div className="summary-card accent">
-        <span className="detail-label">Settlement delta</span>
+        <span className="detail-label">Chênh lệch quyết toán</span>
         <span
           className={`settlement ${
             settlementBadge > 0 ? "positive" : settlementBadge < 0 ? "negative" : "neutral"
           }`}
         >
-          {settlementBadge > 0 ? "Return to company" : settlementBadge < 0 ? "Company owes" : "Balanced"}
+          {settlementBadge > 0 ? "Hoàn về công ty" : settlementBadge < 0 ? "Công ty phải chi" : "Cân bằng"}
           : {formatCurrency(Math.abs(settlementBadge))}
         </span>
       </div>
@@ -762,24 +765,24 @@ export const TourDetailPage = () => {
         actions={
           <div className="action-group">
             <button className="ghost-button" onClick={() => navigate("/")}>
-              <FiArrowLeft /> Back
+              <FiArrowLeft /> Quay lại
             </button>
             {editMode ? (
               <>
                 <button className="ghost-button" onClick={handleCancelEdit}>
-                  <FiXCircle /> Cancel
+                  <FiXCircle /> Hủy
                 </button>
                 <button className="primary-button" onClick={handleSave}>
-                  <FiSave /> Save changes
+                  <FiSave /> Lưu thay đổi
                 </button>
               </>
             ) : (
               <>
                 <button className="ghost-button" onClick={handleEnterEdit}>
-                  <FiEdit /> Edit
+                  <FiEdit /> Chỉnh sửa
                 </button>
                 <button className="danger-button" onClick={handleDelete}>
-                  <FiTrash2 /> Delete
+                  <FiTrash2 /> Xóa
                 </button>
               </>
             )}
@@ -789,7 +792,7 @@ export const TourDetailPage = () => {
       <div className="panel">
         <div className="panel-header with-tabs">
           <div className="panel-title">
-            <FiTag /> Tour overview
+            <FiTag /> Tổng quan tour
           </div>
           <div className="tab-list">
             {tabs.map((tab) => (
@@ -816,7 +819,7 @@ export const TourDetailPage = () => {
           )}
           {discrepancies.length > 0 && !editMode && (
             <div className="warning-banner">
-              <FiAlertTriangle /> {discrepancies.length} service prices were standardised against Master Data.
+              <FiAlertTriangle /> {discrepancies.length} dịch vụ đã được chuẩn hóa theo Dữ liệu chuẩn.
             </div>
           )}
           {tabContent}

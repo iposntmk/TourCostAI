@@ -37,7 +37,7 @@ interface PerDiemFormState {
 
 const emptyServiceForm = (): ServiceFormState => ({
   name: "",
-  category: "Entrance Fee",
+  category: "Vé tham quan",
   price: 0,
   unit: "",
   partnerId: "",
@@ -213,21 +213,21 @@ export const MasterDataPage = () => {
   return (
     <div className="page-wrapper">
       <PageHeader
-        title="Master Data catalogue"
-        description="Maintain the source-of-truth for all guides, services, partners and configuration tables."
+        title="Danh mục Dữ liệu chuẩn"
+        description="Duy trì nguồn dữ liệu chuẩn cho tất cả hướng dẫn viên, dịch vụ, đối tác và bảng cấu hình."
         actions={
           <button className="ghost-button" onClick={resetMasterData}>
-            <FiRefreshCw /> Reset to defaults
+            <FiRefreshCw /> Đặt lại mặc định
           </button>
         }
       />
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title">
-            <FiDatabase /> Services & price list
+            <FiDatabase /> Dịch vụ & bảng giá
           </div>
           <p className="panel-description">
-            Updating a price here immediately impacts AI normalisation and downstream financial reports.
+            Cập nhật giá tại đây sẽ ảnh hưởng ngay lập tức tới việc chuẩn hóa AI và các báo cáo tài chính.
           </p>
         </div>
         <div className="panel-body">
@@ -235,11 +235,11 @@ export const MasterDataPage = () => {
             <table className="data-table compact">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Unit</th>
-                  <th>Partner</th>
+                  <th>Tên</th>
+                  <th>Danh mục</th>
+                  <th>Giá</th>
+                  <th>Đơn vị</th>
+                  <th>Đối tác</th>
                   <th></th>
                 </tr>
               </thead>
@@ -333,10 +333,10 @@ export const MasterDataPage = () => {
                       {editingService?.id === service.id ? (
                         <>
                           <button className="primary-button" onClick={handleSaveService}>
-                            <FiSave /> Save
+                            <FiSave /> Lưu
                           </button>
                           <button className="ghost-button" onClick={() => setEditingService(null)}>
-                            Cancel
+                            Hủy
                           </button>
                         </>
                       ) : (
@@ -345,13 +345,13 @@ export const MasterDataPage = () => {
                             className="ghost-button"
                             onClick={() => setEditingService(service)}
                           >
-                            <FiEdit2 /> Edit
+                            <FiEdit2 /> Chỉnh sửa
                           </button>
                           <button
                             className="ghost-button"
                             onClick={() => removeService(service.id)}
                           >
-                            Remove
+                            Xóa
                           </button>
                         </>
                       )}
@@ -363,7 +363,7 @@ export const MasterDataPage = () => {
           </div>
           <div className="form-grid">
             <label>
-              <span>Service name</span>
+              <span>Tên dịch vụ</span>
               <input
                 value={serviceForm.name}
                 onChange={(event) =>
@@ -372,7 +372,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Category</span>
+              <span>Danh mục</span>
               <input
                 value={serviceForm.category}
                 onChange={(event) =>
@@ -381,7 +381,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Unit</span>
+              <span>Đơn vị</span>
               <input
                 value={serviceForm.unit}
                 onChange={(event) =>
@@ -390,7 +390,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Price</span>
+              <span>Giá</span>
               <input
                 type="number"
                 min={0}
@@ -404,14 +404,14 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Partner</span>
+              <span>Đối tác</span>
               <select
                 value={serviceForm.partnerId}
                 onChange={(event) =>
                   setServiceForm((current) => ({ ...current, partnerId: event.target.value }))
                 }
               >
-                <option value="">None</option>
+                <option value="">Không</option>
                 {masterData.partners.map((partner) => (
                   <option key={partner.id} value={partner.id}>
                     {partner.name}
@@ -420,7 +420,7 @@ export const MasterDataPage = () => {
               </select>
             </label>
             <label className="full-width">
-              <span>Description</span>
+              <span>Mô tả</span>
               <input
                 value={serviceForm.description}
                 onChange={(event) =>
@@ -433,16 +433,16 @@ export const MasterDataPage = () => {
             </label>
           </div>
           <button className="primary-button" onClick={handleAddService}>
-            <FiPlus /> Add service
+            <FiPlus /> Thêm dịch vụ
           </button>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title">Guides</div>
+          <div className="panel-title">Hướng dẫn viên</div>
           <p className="panel-description">
-            Keep contact information updated so AI assignments stay accurate.
+            Cập nhật thông tin liên hệ để việc phân công của AI luôn chính xác.
           </p>
         </div>
         <div className="panel-body">
@@ -450,10 +450,10 @@ export const MasterDataPage = () => {
             <table className="data-table compact">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Phone</th>
+                  <th>Tên</th>
+                  <th>Điện thoại</th>
                   <th>Email</th>
-                  <th>Languages</th>
+                  <th>Ngôn ngữ</th>
                   <th></th>
                 </tr>
               </thead>
@@ -528,10 +528,10 @@ export const MasterDataPage = () => {
                       {editingGuide?.id === guide.id ? (
                         <>
                           <button className="primary-button" onClick={handleSaveGuide}>
-                            <FiSave /> Save
+                            <FiSave /> Lưu
                           </button>
                           <button className="ghost-button" onClick={() => setEditingGuide(null)}>
-                            Cancel
+                            Hủy
                           </button>
                         </>
                       ) : (
@@ -540,13 +540,13 @@ export const MasterDataPage = () => {
                             className="ghost-button"
                             onClick={() => setEditingGuide(guide)}
                           >
-                            <FiEdit2 /> Edit
+                            <FiEdit2 /> Chỉnh sửa
                           </button>
                           <button
                             className="ghost-button"
                             onClick={() => removeGuide(guide.id)}
                           >
-                            Remove
+                            Xóa
                           </button>
                         </>
                       )}
@@ -558,7 +558,7 @@ export const MasterDataPage = () => {
           </div>
           <div className="form-grid">
             <label>
-              <span>Name</span>
+              <span>Tên</span>
               <input
                 value={guideForm.name}
                 onChange={(event) =>
@@ -567,7 +567,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Phone</span>
+              <span>Điện thoại</span>
               <input
                 value={guideForm.phone}
                 onChange={(event) =>
@@ -585,7 +585,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label className="full-width">
-              <span>Languages</span>
+              <span>Ngôn ngữ</span>
               <input
                 value={guideForm.languages}
                 onChange={(event) =>
@@ -594,28 +594,28 @@ export const MasterDataPage = () => {
                     languages: event.target.value,
                   }))
                 }
-                placeholder="English, Vietnamese"
+                placeholder="Anh, Việt"
               />
             </label>
           </div>
           <button className="primary-button" onClick={handleAddGuide}>
-            <FiPlus /> Add guide
+            <FiPlus /> Thêm hướng dẫn viên
           </button>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title">Partners & suppliers</div>
+          <div className="panel-title">Đối tác & nhà cung cấp</div>
         </div>
         <div className="panel-body">
           <div className="table-responsive">
             <table className="data-table compact">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Contact</th>
-                  <th>Phone</th>
+                  <th>Tên</th>
+                  <th>Liên hệ</th>
+                  <th>Điện thoại</th>
                   <th>Email</th>
                   <th></th>
                 </tr>
@@ -685,10 +685,10 @@ export const MasterDataPage = () => {
                       {editingPartner?.id === partner.id ? (
                         <>
                           <button className="primary-button" onClick={handleSavePartner}>
-                            <FiSave /> Save
+                            <FiSave /> Lưu
                           </button>
                           <button className="ghost-button" onClick={() => setEditingPartner(null)}>
-                            Cancel
+                            Hủy
                           </button>
                         </>
                       ) : (
@@ -697,13 +697,13 @@ export const MasterDataPage = () => {
                             className="ghost-button"
                             onClick={() => setEditingPartner(partner)}
                           >
-                            <FiEdit2 /> Edit
+                            <FiEdit2 /> Chỉnh sửa
                           </button>
                           <button
                             className="ghost-button"
                             onClick={() => removePartner(partner.id)}
                           >
-                            Remove
+                            Xóa
                           </button>
                         </>
                       )}
@@ -715,7 +715,7 @@ export const MasterDataPage = () => {
           </div>
           <div className="form-grid">
             <label>
-              <span>Name</span>
+              <span>Tên</span>
               <input
                 value={partnerForm.name}
                 onChange={(event) =>
@@ -724,7 +724,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Contact person</span>
+              <span>Người liên hệ</span>
               <input
                 value={partnerForm.contactName}
                 onChange={(event) =>
@@ -736,7 +736,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Phone</span>
+              <span>Điện thoại</span>
               <input
                 value={partnerForm.phone}
                 onChange={(event) =>
@@ -755,24 +755,24 @@ export const MasterDataPage = () => {
             </label>
           </div>
           <button className="primary-button" onClick={handleAddPartner}>
-            <FiPlus /> Add partner
+            <FiPlus /> Thêm đối tác
           </button>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title">Per diem configuration</div>
+          <div className="panel-title">Cấu hình phụ cấp</div>
         </div>
         <div className="panel-body">
           <div className="table-responsive">
             <table className="data-table compact">
               <thead>
                 <tr>
-                  <th>Location</th>
-                  <th>Rate</th>
-                  <th>Currency</th>
-                  <th>Notes</th>
+                  <th>Địa điểm</th>
+                  <th>Mức phụ cấp</th>
+                  <th>Tiền tệ</th>
+                  <th>Ghi chú</th>
                   <th></th>
                 </tr>
               </thead>
@@ -843,10 +843,10 @@ export const MasterDataPage = () => {
                       {editingPerDiem?.id === rate.id ? (
                         <>
                           <button className="primary-button" onClick={handleSavePerDiem}>
-                            <FiSave /> Save
+                            <FiSave /> Lưu
                           </button>
                           <button className="ghost-button" onClick={() => setEditingPerDiem(null)}>
-                            Cancel
+                            Hủy
                           </button>
                         </>
                       ) : (
@@ -855,13 +855,13 @@ export const MasterDataPage = () => {
                             className="ghost-button"
                             onClick={() => setEditingPerDiem(rate)}
                           >
-                            <FiEdit2 /> Edit
+                            <FiEdit2 /> Chỉnh sửa
                           </button>
                           <button
                             className="ghost-button"
                             onClick={() => removePerDiemRate(rate.id)}
                           >
-                            Remove
+                            Xóa
                           </button>
                         </>
                       )}
@@ -873,7 +873,7 @@ export const MasterDataPage = () => {
           </div>
           <div className="form-grid">
             <label>
-              <span>Location</span>
+              <span>Địa điểm</span>
               <input
                 value={perDiemForm.location}
                 onChange={(event) =>
@@ -882,7 +882,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Rate</span>
+              <span>Mức phụ cấp</span>
               <input
                 type="number"
                 min={0}
@@ -896,7 +896,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label>
-              <span>Currency</span>
+              <span>Tiền tệ</span>
               <input
                 value={perDiemForm.currency}
                 onChange={(event) =>
@@ -905,7 +905,7 @@ export const MasterDataPage = () => {
               />
             </label>
             <label className="full-width">
-              <span>Notes</span>
+              <span>Ghi chú</span>
               <input
                 value={perDiemForm.notes}
                 onChange={(event) =>
@@ -915,22 +915,22 @@ export const MasterDataPage = () => {
             </label>
           </div>
           <button className="primary-button" onClick={handleAddPerDiem}>
-            <FiPlus /> Add rate
+            <FiPlus /> Thêm mức phụ cấp
           </button>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title">Shared catalogues</div>
+          <div className="panel-title">Danh mục dùng chung</div>
           <p className="panel-description">
-            These lists feed dropdowns and the AI matching heuristics.
+            Các danh sách này được sử dụng cho hộp chọn và thuật toán đối chiếu của AI.
           </p>
         </div>
         <div className="panel-body">
           <div className="catalog-grid">
             <div>
-              <h3>Nationalities</h3>
+              <h3>Quốc tịch</h3>
               <ul className="pill-list">
                 {masterData.catalogs.nationalities.map((item) => (
                   <li key={item}>{item}</li>
@@ -940,15 +940,15 @@ export const MasterDataPage = () => {
                 <input
                   value={nationality}
                   onChange={(event) => setNationality(event.target.value)}
-                  placeholder="Add nationality"
+                  placeholder="Thêm quốc tịch"
                 />
                 <button className="ghost-button" onClick={addSharedNationality}>
-                  Add
+                  Thêm
                 </button>
               </div>
             </div>
             <div>
-              <h3>Service types</h3>
+              <h3>Loại dịch vụ</h3>
               <ul className="pill-list">
                 {masterData.catalogs.serviceTypes.map((item) => (
                   <li key={item}>{item}</li>
@@ -958,10 +958,10 @@ export const MasterDataPage = () => {
                 <input
                   value={serviceType}
                   onChange={(event) => setServiceType(event.target.value)}
-                  placeholder="Add type"
+                  placeholder="Thêm loại"
                 />
                 <button className="ghost-button" onClick={addSharedServiceType}>
-                  Add
+                  Thêm
                 </button>
               </div>
             </div>
