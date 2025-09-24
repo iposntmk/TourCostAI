@@ -6,6 +6,7 @@ import { Dashboard } from "./pages/Dashboard/Dashboard";
 import { MasterDataPage } from "./pages/MasterData/MasterDataPage";
 import { NewTourPage } from "./pages/NewTour/NewTourPage";
 import { TourDetailPage } from "./pages/TourDetail/TourDetailPage";
+import { SettingsPage } from "./pages/Settings/SettingsPage";
 import "./App.css";
 
 const NotFound = () => (
@@ -30,6 +31,7 @@ function App() {
               <Route path="/new" element={<NewTourPage />} />
               <Route path="/tour/:id" element={<TourDetailPage />} />
               <Route path="/master-data" element={<MasterDataPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

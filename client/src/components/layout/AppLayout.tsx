@@ -6,6 +6,7 @@ const navItems = [
   { to: "/", label: "Trang tổng quan" },
   { to: "/new", label: "Nhập liệu AI" },
   { to: "/master-data", label: "Dữ liệu chuẩn" },
+  { to: "/settings", label: "Cài đặt" },
 ];
 
 export const AppLayout = ({ children }: { children: ReactNode }) => {

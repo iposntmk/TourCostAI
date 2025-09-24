@@ -3,6 +3,7 @@ import {
   FiAlertTriangle,
   FiCheckCircle,
   FiDownload,
+  FiEdit,
   FiFilePlus,
   FiFileText,
   FiRefreshCw,
@@ -10,6 +11,9 @@ import {
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
+import { JsonViewer } from "../../components/common/JsonViewer";
+import { PromptManager } from "../../components/common/PromptManager";
+import { PromptConfirmationModal } from "../../components/common/PromptConfirmationModal";
 import { useMasterData } from "../../contexts/MasterDataContext";
 import { useTours } from "../../contexts/TourContext";
 import type {
@@ -31,6 +35,8 @@ import {
   matchExtractedServices,
   simulateGeminiExtraction,
 } from "../../utils/extraction";
+import { extractWithAI, loadApiKey, loadApiMode } from "../../services/aiExtraction";
+import { getLatestPrompt } from "../../services/promptService";
 import { generateId } from "../../utils/ids";
 import { groupServicesByItinerary } from "../../utils/itinerary";
 
@@ -67,7 +73,10 @@ export const NewTourPage = () => {
   | null>(null);
   const [processing, setProcessing] = useState(false);
   const [extractionNotes, setExtractionNotes] = useState<string | null>(null);
+  const [rawExtractionResult, setRawExtractionResult] = useState<ExtractionResult | null>(null);
   const [matches, setMatches] = useState<MatchedService[]>([]);
+  const [showPromptManager, setShowPromptManager] = useState(false);
+  const [showPromptConfirmation, setShowPromptConfirmation] = useState(false);
   const [otherExpenses, setOtherExpenses] = useState<Expense[]>([]);
   const [financials, setFinancials] = useState<FinancialSummary>(() => ({
     ...initialFinancialSummary,
@@ -81,6 +90,7 @@ export const NewTourPage = () => {
   useEffect(() => {
     if (!uploadSource) {
       setExtractionNotes(null);
+      setRawExtractionResult(null);
     }
   }, [uploadSource]);
 
@@ -90,6 +100,7 @@ export const NewTourPage = () => {
     setItinerary([]);
     setOtherExpenses([]);
     setFinancials({ ...initialFinancialSummary });
+    setRawExtractionResult(null);
   };
 
   const isExtractionResult = (value: unknown): value is ExtractionResult => {
@@ -161,10 +172,42 @@ export const NewTourPage = () => {
         activities: item.activities,
       })),
     );
-    const message =
-      options?.note ??
-      `Google Gemini đã trích xuất thành công ${extraction.services.length} dịch vụ và ${extraction.itinerary.length} ngày lịch trình từ chương trình đã tải lên.`;
+    const message = options?.note ?? createExtractionMessage(extraction);
     setExtractionNotes(message);
+  };
+
+  const createExtractionMessage = (extraction: ExtractionResult): string => {
+    const servicesCount = extraction.services.length;
+    const itineraryCount = extraction.itinerary.length;
+    const expensesCount = extraction.otherExpenses.length;
+    const hasGeneralInfo = extraction.general.tourCode || extraction.general.customerName || extraction.general.pax > 0;
+    
+    const parts: string[] = [];
+    
+    if (hasGeneralInfo) {
+      parts.push("thông tin chung tour");
+    }
+    if (servicesCount > 0) {
+      parts.push(`${servicesCount} dịch vụ`);
+    }
+    if (itineraryCount > 0) {
+      parts.push(`${itineraryCount} ngày lịch trình`);
+    }
+    if (expensesCount > 0) {
+      parts.push(`${expensesCount} chi phí khác`);
+    }
+    
+    if (parts.length === 0) {
+      return "⚠️ Gemini đã xử lý hình ảnh nhưng không trích xuất được thông tin có ý nghĩa. Vui lòng kiểm tra chất lượng hình ảnh hoặc thử hình ảnh khác.";
+    }
+    
+    const message = `✅ Google Gemini đã trích xuất thành công: ${parts.join(", ")} từ chương trình đã tải lên.`;
+    
+    if (servicesCount === 0 && itineraryCount === 0) {
+      return message + " ⚠️ Lưu ý: Không có dịch vụ hoặc lịch trình được trích xuất. Có thể cần kiểm tra lại prompt hoặc chất lượng hình ảnh.";
+    }
+    
+    return message;
   };
 
   const corrections = useMemo(
@@ -191,13 +234,58 @@ export const NewTourPage = () => {
 
   const handleRunExtraction = () => {
     if (uploadSource?.type !== "image") return;
+    
+    const apiMode = loadApiMode();
+    if (apiMode === "live") {
+      // Show confirmation modal for live mode
+      setShowPromptConfirmation(true);
+    } else {
+      // Run directly for mock mode
+      executeExtraction();
+    }
+  };
+
+  const executeExtraction = async () => {
     setProcessing(true);
     setError(null);
-    setTimeout(() => {
-      const extraction = simulateGeminiExtraction(masterData);
+    
+    try {
+      const apiMode = loadApiMode();
+      const apiKey = loadApiKey();
+      
+      let extraction: ExtractionResult;
+      
+      if (apiMode === "live" && apiKey) {
+        // Use real Gemini AI with latest prompt
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const file = fileInput?.files?.[0];
+        if (!file) {
+          throw new Error("Không tìm thấy file để xử lý");
+        }
+        
+        // Get latest prompt from Firebase
+        const latestPrompt = await getLatestPrompt();
+        if (!latestPrompt) {
+          throw new Error("Không tìm thấy prompt nào. Vui lòng tạo prompt trước khi chạy trích xuất.");
+        }
+        
+        extraction = await extractWithAI(file, masterData, apiKey, latestPrompt.content);
+      } else {
+        // Use mock data
+        await new Promise((r) => setTimeout(r, 900));
+        extraction = simulateGeminiExtraction(masterData);
+      }
+      
+      // Store raw extraction result for JSON display
+      setRawExtractionResult(extraction);
       applyExtraction(extraction);
+    } catch (error) {
+      console.error("Extraction failed:", error);
+      setError(error instanceof Error ? error.message : "Có lỗi xảy ra khi trích xuất dữ liệu");
+      setRawExtractionResult(null);
+    } finally {
       setProcessing(false);
-    }, 900);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,6 +373,7 @@ export const NewTourPage = () => {
     setProcessing(false);
     setError(null);
     setExtractionNotes(null);
+    setRawExtractionResult(null);
     resetFormState();
   };
 
@@ -467,6 +556,13 @@ export const NewTourPage = () => {
               </button>
               <button
                 className="ghost-button"
+                onClick={() => setShowPromptManager(!showPromptManager)}
+                type="button"
+              >
+                <FiEdit /> Quản lý Prompts
+              </button>
+              <button
+                className="ghost-button"
                 type="button"
                 onClick={() => jsonInputRef.current?.click()}
               >
@@ -505,6 +601,33 @@ export const NewTourPage = () => {
             {error && (
               <div className="error-banner">
                 <FiAlertTriangle /> {error}
+                <div className="error-actions">
+                  <button
+                    className="ghost-button small"
+                    onClick={handleRunExtraction}
+                    disabled={processing || uploadSource?.type !== "image"}
+                  >
+                    <FiRefreshCw /> Thử lại
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Prompt Manager */}
+            {showPromptManager && (
+              <div className="prompt-manager-section">
+                <PromptManager onPromptChange={() => {}} />
+              </div>
+            )}
+
+            {/* JSON Result Display */}
+            {rawExtractionResult && !processing && (
+              <div className="json-result-section">
+                <JsonViewer 
+                  data={rawExtractionResult} 
+                  title="Kết quả trích xuất từ Gemini AI"
+                  defaultExpanded={false}
+                />
               </div>
             )}
           </div>
@@ -923,6 +1046,14 @@ export const NewTourPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Prompt Confirmation Modal */}
+      <PromptConfirmationModal
+        isOpen={showPromptConfirmation}
+        onClose={() => setShowPromptConfirmation(false)}
+        onConfirm={executeExtraction}
+        isProcessing={processing}
+      />
     </div>
   );
 };
