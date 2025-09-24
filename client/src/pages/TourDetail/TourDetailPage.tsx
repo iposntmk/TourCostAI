@@ -234,6 +234,16 @@ export const TourDetailPage = () => {
     }));
   };
 
+  const describeSettlement = (difference: number) => {
+    if (difference > 0) {
+      return `Hoàn lại công ty ${formatCurrency(difference)}`;
+    }
+    if (difference < 0) {
+      return `Công ty bù thêm ${formatCurrency(Math.abs(difference))}`;
+    }
+    return "Đã cân bằng";
+  };
+
   const handleSave = () => {
     if (!editableTour) return;
     const errors = validationRules(editableTour);
@@ -257,8 +267,6 @@ export const TourDetailPage = () => {
   const totalServices = calculateServiceTotal(displayTour.services);
   const totalPerDiem = calculatePerDiemTotal(displayTour.perDiem);
   const totalOtherExpenses = calculateOtherExpenseTotal(displayTour.otherExpenses);
-
-  const settlementBadge = displayTour.financials.differenceToAdvance;
 
   const renderGeneral = () => (
     <div className="detail-grid">
@@ -720,82 +728,105 @@ export const TourDetailPage = () => {
     </div>
   );
 
-  const renderSummary = () => (
-    <div className="summary-grid">
-      <div className="summary-card">
-        <span className="detail-label">Tạm ứng</span>
-        {editMode ? (
-          <input
-            type="number"
-            min={0}
-            value={displayTour.financials.advance}
-            onChange={(event) =>
-              handleFinancialChange("advance", event.target.value)
-            }
-          />
-        ) : (
-          <strong>{formatCurrency(displayTour.financials.advance)}</strong>
-        )}
+  const renderSummary = () => {
+    const settlementDifference = displayTour.financials.differenceToAdvance;
+    const summaryItems: {
+      key: string;
+      label: string;
+      value: number;
+      editableKey?: "advance" | "collectionsForCompany" | "companyTip";
+      tone: "positive" | "negative" | "neutral";
+      note?: string;
+    }[] = [
+      {
+        key: "advance",
+        label: "Tạm ứng",
+        value: displayTour.financials.advance,
+        editableKey: "advance",
+        tone: "positive",
+      },
+      {
+        key: "collections",
+        label: "Thu hộ công ty",
+        value: displayTour.financials.collectionsForCompany,
+        editableKey: "collectionsForCompany",
+        tone: "positive",
+      },
+      {
+        key: "companyTip",
+        label: "Tiền tip công ty",
+        value: displayTour.financials.companyTip,
+        editableKey: "companyTip",
+        tone: "positive",
+      },
+      {
+        key: "services",
+        label: "Tổng dịch vụ",
+        value: totalServices,
+        tone: "negative",
+      },
+      {
+        key: "perDiem",
+        label: "Tổng phụ cấp",
+        value: totalPerDiem,
+        tone: "negative",
+      },
+      {
+        key: "otherExpenses",
+        label: "Chi phí khác",
+        value: totalOtherExpenses,
+        tone: "negative",
+      },
+      {
+        key: "totalCost",
+        label: "Tổng chi phí",
+        value: displayTour.financials.totalCost,
+        tone: "negative",
+      },
+      {
+        key: "difference",
+        label: "Chênh lệch quyết toán",
+        value: settlementDifference,
+        tone:
+          settlementDifference > 0
+            ? "positive"
+            : settlementDifference < 0
+              ? "negative"
+              : "neutral",
+        note: describeSettlement(settlementDifference),
+      },
+    ];
+
+    return (
+      <div className="summary-list">
+        {summaryItems.map((item) => (
+          <div key={item.key} className={`summary-row ${item.tone}`}>
+            <div className="summary-cell">
+              <span className="summary-label">{item.label}</span>
+              {editMode && item.editableKey ? (
+                <input
+                  type="number"
+                  min={0}
+                  value={displayTour.financials[item.editableKey]}
+                  onChange={(event) =>
+                    handleFinancialChange(item.editableKey!, event.target.value)
+                  }
+                  className="summary-input"
+                />
+              ) : (
+                <span className={`summary-value ${item.tone}`}>
+                  {formatCurrency(item.value)}
+                </span>
+              )}
+            </div>
+            {item.note && !editMode && (
+              <div className="summary-note">{item.note}</div>
+            )}
+          </div>
+        ))}
       </div>
-      <div className="summary-card">
-        <span className="detail-label">Thu hộ công ty</span>
-        {editMode ? (
-          <input
-            type="number"
-            min={0}
-            value={displayTour.financials.collectionsForCompany}
-            onChange={(event) =>
-              handleFinancialChange("collectionsForCompany", event.target.value)
-            }
-          />
-        ) : (
-          <strong>{formatCurrency(displayTour.financials.collectionsForCompany)}</strong>
-        )}
-      </div>
-      <div className="summary-card">
-        <span className="detail-label">Tiền tip công ty</span>
-        {editMode ? (
-          <input
-            type="number"
-            min={0}
-            value={displayTour.financials.companyTip}
-            onChange={(event) =>
-              handleFinancialChange("companyTip", event.target.value)
-            }
-          />
-        ) : (
-          <strong>{formatCurrency(displayTour.financials.companyTip)}</strong>
-        )}
-      </div>
-      <div className="summary-card">
-        <span className="detail-label">Tổng dịch vụ</span>
-        <strong>{formatCurrency(totalServices)}</strong>
-      </div>
-      <div className="summary-card">
-        <span className="detail-label">Tổng phụ cấp</span>
-        <strong>{formatCurrency(totalPerDiem)}</strong>
-      </div>
-      <div className="summary-card">
-        <span className="detail-label">Chi phí khác</span>
-        <strong>{formatCurrency(totalOtherExpenses)}</strong>
-      </div>
-      <div className="summary-card accent">
-        <span className="detail-label">Tổng chi phí</span>
-        <strong>{formatCurrency(displayTour.financials.totalCost)}</strong>
-      </div>
-      <div className="summary-card accent">
-        <span className="detail-label">Chênh lệch quyết toán</span>
-        <span
-          className={`settlement ${
-            settlementBadge > 0 ? "positive" : settlementBadge < 0 ? "negative" : "neutral"
-          }`}
-        >
-          {settlementBadge > 0 ? "Hoàn về công ty" : settlementBadge < 0 ? "Công ty phải chi" : "Cân bằng"}
-          : {formatCurrency(Math.abs(settlementBadge))}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   let tabContent: ReactNode;
   switch (activeTab) {

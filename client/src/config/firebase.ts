@@ -21,7 +21,7 @@ export const db = getFirestore(app);
 
 // Initialize Analytics (only in production)
 let analytics: Analytics | null = null;
-if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
+if (typeof window !== "undefined" && import.meta.env.MODE === "production") {
   analytics = getAnalytics(app);
 }
 

@@ -4,7 +4,6 @@ export interface Service {
   category: string;
   price: number;
   unit: string;
-  partnerId?: string;
   description?: string;
 }
 
@@ -14,15 +13,6 @@ export interface Guide {
   phone?: string;
   email?: string;
   languages?: string[];
-}
-
-export interface Partner {
-  id: string;
-  name: string;
-  contactName?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
 }
 
 export interface PerDiemRate {
@@ -41,7 +31,6 @@ export interface Catalogs {
 export interface MasterData {
   services: Service[];
   guides: Guide[];
-  partners: Partner[];
   perDiemRates: PerDiemRate[];
   catalogs: Catalogs;
 }

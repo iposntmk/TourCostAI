@@ -6,6 +6,7 @@ import {
   FiEdit,
   FiFilePlus,
   FiFileText,
+  FiInfo,
   FiRefreshCw,
   FiUploadCloud,
 } from "react-icons/fi";
@@ -54,6 +55,7 @@ export const NewTourPage = () => {
   const { createTour } = useTours();
 
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const createInitialGeneral = () => ({
     code: "",
@@ -71,6 +73,7 @@ export const NewTourPage = () => {
   const [uploadSource, setUploadSource] = useState<
     { name: string; type: "image" | "json" }
   | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [extractionNotes, setExtractionNotes] = useState<string | null>(null);
   const [rawExtractionResult, setRawExtractionResult] = useState<ExtractionResult | null>(null);
@@ -86,13 +89,30 @@ export const NewTourPage = () => {
     [] as { id: string; day: number; date: string; location: string; activities: string[] }[],
   );
   const [error, setError] = useState<string | null>(null);
+  const [showVerification, setShowVerification] = useState(false);
 
   useEffect(() => {
     if (!uploadSource) {
       setExtractionNotes(null);
       setRawExtractionResult(null);
+      setImagePreview(null);
+      setShowVerification(false);
+      return;
+    }
+
+    if (uploadSource.type === "json") {
+      setImagePreview(null);
     }
   }, [uploadSource]);
+
+  useEffect(
+    () => () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    },
+    [imagePreview],
+  );
 
   const resetFormState = () => {
     setGeneral(createInitialGeneral());
@@ -101,6 +121,7 @@ export const NewTourPage = () => {
     setOtherExpenses([]);
     setFinancials({ ...initialFinancialSummary });
     setRawExtractionResult(null);
+    setShowVerification(false);
   };
 
   const isExtractionResult = (value: unknown): value is ExtractionResult => {
@@ -133,6 +154,7 @@ export const NewTourPage = () => {
     extraction: ExtractionResult,
     options?: { note?: string },
   ) => {
+    setRawExtractionResult(extraction);
     const matchedGuide = findGuideByName(extraction.general.guideName);
     setMatches(matchExtractedServices(extraction, masterData));
     setGeneral({
@@ -174,6 +196,7 @@ export const NewTourPage = () => {
     );
     const message = options?.note ?? createExtractionMessage(extraction);
     setExtractionNotes(message);
+    setShowVerification(true);
   };
 
   const createExtractionMessage = (extraction: ExtractionResult): string => {
@@ -257,12 +280,11 @@ export const NewTourPage = () => {
       
       if (apiMode === "live" && apiKey) {
         // Use real Gemini AI with latest prompt
-        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-        const file = fileInput?.files?.[0];
+        const file = imageInputRef.current?.files?.[0];
         if (!file) {
-          throw new Error("Không tìm thấy file để xử lý");
+          throw new Error("Không tìm thấy tệp hình ảnh để xử lý");
         }
-        
+
         // Get latest prompt from Firebase
         const latestPrompt = await getLatestPrompt();
         if (!latestPrompt) {
@@ -276,8 +298,6 @@ export const NewTourPage = () => {
         extraction = simulateGeminiExtraction(masterData);
       }
       
-      // Store raw extraction result for JSON display
-      setRawExtractionResult(extraction);
       applyExtraction(extraction);
     } catch (error) {
       console.error("Extraction failed:", error);
@@ -294,6 +314,19 @@ export const NewTourPage = () => {
     setUploadSource({ name: file.name, type: "image" });
     setError(null);
     setExtractionNotes(null);
+    setRawExtractionResult(null);
+    setShowVerification(false);
+    if (file.type.startsWith("image/")) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview((current) => {
+        if (current) {
+          URL.revokeObjectURL(current);
+        }
+        return previewUrl;
+      });
+    } else {
+      setImagePreview(null);
+    }
   };
 
   const handleJsonImport = async (
@@ -307,8 +340,8 @@ export const NewTourPage = () => {
       const noteParts: string[] = [];
       let extractionToApply: ExtractionResult | null = null;
 
-      const importTour = (tourData: Tour) => {
-        createTour({
+      const importTour = async (tourData: Tour) => {
+        await createTour({
           general: tourData.general,
           itinerary: tourData.itinerary,
           services: tourData.services,
@@ -323,7 +356,9 @@ export const NewTourPage = () => {
         const extractionsInFile = parsed.filter(isExtractionResult) as ExtractionResult[];
 
         if (toursInFile.length > 0) {
-          toursInFile.forEach(importTour);
+          for (const tourData of toursInFile) {
+            await importTour(tourData);
+          }
           resetFormState();
           noteParts.push(`${toursInFile.length} tour đã được thêm vào hệ thống`);
         }
@@ -332,7 +367,7 @@ export const NewTourPage = () => {
           extractionToApply = extractionsInFile[0];
         }
       } else if (isTour(parsed)) {
-        importTour(parsed);
+        await importTour(parsed);
         resetFormState();
         noteParts.push(
           parsed.general?.code
@@ -374,6 +409,14 @@ export const NewTourPage = () => {
     setError(null);
     setExtractionNotes(null);
     setRawExtractionResult(null);
+    setImagePreview(null);
+    setShowVerification(false);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+    if (jsonInputRef.current) {
+      jsonInputRef.current.value = "";
+    }
     resetFormState();
   };
 
@@ -470,7 +513,7 @@ export const NewTourPage = () => {
     setOtherExpenses((current) => current.filter((expense) => expense.id !== id));
   };
 
-  const handleCreateTour = () => {
+  const handleCreateTour = async () => {
     if (!general.code.trim()) {
       setError("Yêu cầu nhập mã tour.");
       return;
@@ -485,7 +528,7 @@ export const NewTourPage = () => {
     }
     setError(null);
 
-    const newTourId = createTour({
+    const newTourId = await createTour({
       general: {
         ...general,
         startDate: general.startDate,
@@ -504,7 +547,7 @@ export const NewTourPage = () => {
     ? "Đang gọi Google Gemini và áp dụng các quy tắc từ Dữ liệu chuẩn..."
     : extractionNotes;
 
-  const canConfirm = matches.length > 0 && !processing;
+  const canConfirm = showVerification && !processing;
 
   return (
     <div className="page-wrapper new-tour-page">
@@ -515,24 +558,36 @@ export const NewTourPage = () => {
       <div className="layout-two-column">
         <div className="panel">
           <div className="panel-header">
-            <div className="panel-title">
-              <FiUploadCloud /> Tải hình ảnh lịch trình
+            <div className="panel-title with-help">
+              <span>
+                <FiUploadCloud /> Tải hình ảnh lịch trình
+              </span>
+              <button
+                type="button"
+                className="info-tooltip-trigger"
+                aria-label="Xem hướng dẫn tải tệp"
+              >
+                <FiInfo />
+                <div className="info-tooltip-panel">
+                  <p>
+                    Định dạng hỗ trợ: JPG, PNG, PDF. Công cụ AI đọc được tài liệu nhiều trang và nhận diện giá, hướng dẫn viên, dịch vụ cùng ghi chú.
+                  </p>
+                  <p>
+                    Hoặc tải tệp JSON đã chuẩn hóa để thêm tour hàng loạt hoặc điền sẵn dữ liệu kiểm tra trước khi xác nhận.
+                  </p>
+                  <p>
+                    Nhấn nút <strong>Tải JSON mẫu</strong> để tải về ví dụ đúng cấu trúc cho quá trình nhập liệu.
+                  </p>
+                </div>
+              </button>
             </div>
-            <p className="panel-description">
-              Định dạng hỗ trợ: JPG, PNG, PDF. Công cụ AI đọc được tài liệu nhiều trang và nhận diện giá, hướng dẫn viên, dịch vụ cùng ghi chú.
-            </p>
-            <p className="panel-description">
-              Hoặc tải tệp JSON đã chuẩn hóa để thêm tour hàng loạt hoặc điền sẵn dữ liệu kiểm tra trước khi xác nhận.
-            </p>
-            <p className="panel-description">
-              Nhấn nút Tải JSON mẫu để tải về ví dụ đúng cấu trúc cho quá trình nhập liệu.
-            </p>
           </div>
           <div className="panel-body upload-zone">
             <label className="upload-dropzone">
               <input
                 type="file"
                 accept="image/*,application/pdf"
+                ref={imageInputRef}
                 onChange={handleFileChange}
                 hidden
               />
@@ -545,7 +600,12 @@ export const NewTourPage = () => {
                   : "Kéo thả hoặc nhấp để chọn hình ảnh chương trình tour"}
               </span>
             </label>
-            <div className="upload-actions">
+            {imagePreview && (
+              <div className="image-preview">
+                <img src={imagePreview} alt={`Xem trước ${uploadSource?.name ?? "tệp đã tải"}`} />
+              </div>
+            )}
+            <div className="upload-actions sticky-actions">
               <button
                 className="primary-button"
                 disabled={uploadSource?.type !== "image" || processing}
@@ -633,6 +693,7 @@ export const NewTourPage = () => {
           </div>
         </div>
 
+        {showVerification ? (
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">
@@ -1045,6 +1106,21 @@ export const NewTourPage = () => {
             </div>
           </div>
         </div>
+        ) : (
+          <div className="panel verification-placeholder">
+            <div className="panel-body">
+              <div className="placeholder-message">
+                <FiInfo />
+                <div>
+                  <strong>Chạy Gemini để mở bước xác minh.</strong>
+                  <p>
+                    Sau khi AI hoàn tất trích xuất, biểu mẫu này sẽ xuất hiện để bạn rà soát dữ liệu và lưu tour vào hệ thống.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Prompt Confirmation Modal */}

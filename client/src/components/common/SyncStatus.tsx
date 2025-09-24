@@ -15,7 +15,7 @@ export const SyncStatus = () => {
     if (isLoading) return "Đang tải...";
     if (!syncStatus.isOnline) return "Offline";
     if (syncStatus.pendingChanges) return "Có thay đổi chưa sync";
-    return "Đã đồng bộ";
+    return "Đồng bộ với Firebase";
   };
 
   const getStatusColor = () => {

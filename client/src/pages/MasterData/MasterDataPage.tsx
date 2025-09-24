@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { FiDatabase, FiDownload, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiBriefcase, FiDollarSign, FiList, FiTrash2 } from "react-icons/fi";
+import { FiDatabase, FiDownload, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiDollarSign, FiList, FiTrash2 } from "react-icons/fi";
 import { PageHeader } from "../../components/common/PageHeader";
 import { TabMenu } from "../../components/common/TabMenu";
 import { SyncStatus } from "../../components/common/SyncStatus";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { useMasterData } from "../../contexts/MasterDataContext";
-import type { Guide, Partner, PerDiemRate, Service } from "../../types";
+import type { Guide, PerDiemRate, Service } from "../../types";
 import { formatCurrency } from "../../utils/format";
 
 interface ServiceFormState {
@@ -13,7 +13,6 @@ interface ServiceFormState {
   category: string;
   price: number;
   unit: string;
-  partnerId: string;
   description: string;
 }
 
@@ -22,13 +21,6 @@ interface GuideFormState {
   phone: string;
   email: string;
   languages: string;
-}
-
-interface PartnerFormState {
-  name: string;
-  contactName: string;
-  phone: string;
-  email: string;
 }
 
 interface PerDiemFormState {
@@ -43,7 +35,6 @@ const emptyServiceForm = (defaultCategory = ""): ServiceFormState => ({
   category: defaultCategory,
   price: 0,
   unit: "",
-  partnerId: "",
   description: "",
 });
 
@@ -52,13 +43,6 @@ const emptyGuideForm = (): GuideFormState => ({
   phone: "",
   email: "",
   languages: "",
-});
-
-const emptyPartnerForm = (): PartnerFormState => ({
-  name: "",
-  contactName: "",
-  phone: "",
-  email: "",
 });
 
 const emptyPerDiemForm = (): PerDiemFormState => ({
@@ -77,9 +61,6 @@ export const MasterDataPage = () => {
     addGuide,
     updateGuide,
     removeGuide,
-    addPartner,
-    updatePartner,
-    removePartner,
     addPerDiemRate,
     updatePerDiemRate,
     removePerDiemRate,
@@ -96,12 +77,10 @@ export const MasterDataPage = () => {
     emptyServiceForm(defaultServiceCategory),
   );
   const [guideForm, setGuideForm] = useState<GuideFormState>(emptyGuideForm);
-  const [partnerForm, setPartnerForm] = useState<PartnerFormState>(emptyPartnerForm);
   const [perDiemForm, setPerDiemForm] = useState<PerDiemFormState>(emptyPerDiemForm);
 
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingGuide, setEditingGuide] = useState<Guide | null>(null);
-  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [editingPerDiem, setEditingPerDiem] = useState<PerDiemRate | null>(null);
   const [nationality, setNationality] = useState("");
   const [serviceType, setServiceType] = useState("");
@@ -163,7 +142,6 @@ export const MasterDataPage = () => {
   const tabs = [
     { id: "services", label: "Dịch vụ & bảng giá", icon: <FiDatabase /> },
     { id: "guides", label: "Hướng dẫn viên", icon: <FiUsers /> },
-    { id: "partners", label: "Đối tác", icon: <FiBriefcase /> },
     { id: "perdiem", label: "Phụ cấp", icon: <FiDollarSign /> },
     { id: "catalogs", label: "Danh mục chung", icon: <FiList /> },
   ];
@@ -182,7 +160,6 @@ export const MasterDataPage = () => {
       category: serviceForm.category,
       price: serviceForm.price,
       unit: serviceForm.unit.trim(),
-      partnerId: serviceForm.partnerId || undefined,
       description: serviceForm.description || undefined,
     });
     setServiceForm(emptyServiceForm(serviceTypes[0] ?? ""));
@@ -196,7 +173,6 @@ export const MasterDataPage = () => {
       category: editingService.category,
       price: editingService.price,
       unit: editingService.unit,
-      partnerId: editingService.partnerId,
       description: editingService.description,
     });
     setEditingService(null);
@@ -226,29 +202,6 @@ export const MasterDataPage = () => {
       languages: editingGuide.languages,
     });
     setEditingGuide(null);
-  };
-
-  const handleAddPartner = () => {
-    if (!partnerForm.name.trim()) return;
-    addPartner({
-      name: partnerForm.name.trim(),
-      contactName: partnerForm.contactName || undefined,
-      phone: partnerForm.phone || undefined,
-      email: partnerForm.email || undefined,
-    });
-    setPartnerForm(emptyPartnerForm());
-  };
-
-  const handleSavePartner = () => {
-    if (!editingPartner) return;
-    if (!editingPartner.name.trim()) return;
-    updatePartner(editingPartner.id, {
-      name: editingPartner.name.trim(),
-      contactName: editingPartner.contactName,
-      phone: editingPartner.phone,
-      email: editingPartner.email,
-    });
-    setEditingPartner(null);
   };
 
   const handleAddPerDiem = () => {
@@ -327,30 +280,22 @@ export const MasterDataPage = () => {
   };
 
   const handleExportServicesTxt = () => {
-    const partnerLookup = new Map(
-      masterData.partners.map((partner) => [partner.id, partner.name] as const),
-    );
     const header = toCsvLine([
       "Tên dịch vụ",
       "Danh mục",
       "Giá",
       "Đơn vị",
-      "Đối tác",
       "Mô tả",
     ]);
-    const lines = masterData.services.map((service) => {
-      const partnerName = service.partnerId
-        ? partnerLookup.get(service.partnerId) ?? ""
-        : "";
-      return toCsvLine([
+    const lines = masterData.services.map((service) =>
+      toCsvLine([
         service.name,
         service.category,
         service.price,
         service.unit,
-        partnerName,
         service.description ?? "",
-      ]);
-    });
+      ]),
+    );
     exportToTextFile("services.txt", [header, ...lines]);
   };
 
@@ -365,26 +310,6 @@ export const MasterDataPage = () => {
       ]),
     );
     exportToTextFile("guides.txt", [header, ...lines]);
-  };
-
-  const handleExportPartnersTxt = () => {
-    const header = toCsvLine([
-      "Tên",
-      "Người liên hệ",
-      "Điện thoại",
-      "Email",
-      "Địa chỉ",
-    ]);
-    const lines = masterData.partners.map((partner) =>
-      toCsvLine([
-        partner.name,
-        partner.contactName ?? "",
-        partner.phone ?? "",
-        partner.email ?? "",
-        partner.address ?? "",
-      ]),
-    );
-    exportToTextFile("partners.txt", [header, ...lines]);
   };
 
   const handleExportPerDiemTxt = () => {
@@ -422,8 +347,6 @@ export const MasterDataPage = () => {
         return renderServicesTab();
       case "guides":
         return renderGuidesTab();
-      case "partners":
-        return renderPartnersTab();
       case "perdiem":
         return renderPerDiemTab();
       case "catalogs":
@@ -463,7 +386,6 @@ export const MasterDataPage = () => {
                 <th>Danh mục</th>
                 <th>Giá</th>
                 <th>Đơn vị</th>
-                <th>Đối tác</th>
                 <th></th>
               </tr>
             </thead>
@@ -525,29 +447,6 @@ export const MasterDataPage = () => {
                       />
                     ) : (
                       service.unit
-                    )}
-                  </td>
-                  <td>
-                    {editingService?.id === service.id ? (
-                      <select
-                        value={editingService.partnerId ?? ""}
-                        onChange={(event) =>
-                          setEditingService((current) =>
-                            current
-                              ? { ...current, partnerId: event.target.value || undefined }
-                              : current,
-                          )
-                        }
-                      >
-                        <option value="">—</option>
-                        {masterData.partners.map((partner) => (
-                          <option key={partner.id} value={partner.id}>
-                            {partner.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      masterData.partners.find((partner) => partner.id === service.partnerId)?.name || "—"
                     )}
                   </td>
                   <td className="table-actions">
@@ -620,22 +519,6 @@ export const MasterDataPage = () => {
                 }))
               }
             />
-          </label>
-          <label>
-            <span>Đối tác</span>
-            <select
-              value={serviceForm.partnerId}
-              onChange={(event) =>
-                setServiceForm((current) => ({ ...current, partnerId: event.target.value }))
-              }
-            >
-              <option value="">Không</option>
-              {masterData.partners.map((partner) => (
-                <option key={partner.id} value={partner.id}>
-                  {partner.name}
-                </option>
-              ))}
-            </select>
           </label>
           <label className="full-width">
             <span>Mô tả</span>
@@ -831,175 +714,6 @@ export const MasterDataPage = () => {
         </div>
         <button className="primary-button" onClick={handleAddGuide}>
           <FiPlus /> Thêm hướng dẫn viên
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderPartnersTab = () => (
-    <div className="panel">
-      <div className="panel-header">
-        <div className="panel-title">Đối tác & nhà cung cấp</div>
-      </div>
-      <div className="panel-body">
-        <div
-          style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}
-        >
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={handleExportPartnersTxt}
-          >
-            <FiDownload /> Xuất TXT
-          </button>
-        </div>
-        <div className="table-responsive">
-          <table className="data-table compact">
-            <thead>
-              <tr>
-                <th>Tên</th>
-                <th>Liên hệ</th>
-                <th>Điện thoại</th>
-                <th>Email</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {masterData.partners.map((partner) => (
-                <tr key={partner.id}>
-                  <td>
-                    {editingPartner?.id === partner.id ? (
-                      <input
-                        value={editingPartner.name}
-                        onChange={(event) =>
-                          setEditingPartner((current) =>
-                            current ? { ...current, name: event.target.value } : current,
-                          )
-                        }
-                      />
-                    ) : (
-                      partner.name
-                    )}
-                  </td>
-                  <td>
-                    {editingPartner?.id === partner.id ? (
-                      <input
-                        value={editingPartner.contactName ?? ""}
-                        onChange={(event) =>
-                          setEditingPartner((current) =>
-                            current
-                              ? { ...current, contactName: event.target.value }
-                              : current,
-                          )
-                        }
-                      />
-                    ) : (
-                      partner.contactName || "—"
-                    )}
-                  </td>
-                  <td>
-                    {editingPartner?.id === partner.id ? (
-                      <input
-                        value={editingPartner.phone ?? ""}
-                        onChange={(event) =>
-                          setEditingPartner((current) =>
-                            current ? { ...current, phone: event.target.value } : current,
-                          )
-                        }
-                      />
-                    ) : (
-                      partner.phone || "—"
-                    )}
-                  </td>
-                  <td>
-                    {editingPartner?.id === partner.id ? (
-                      <input
-                        value={editingPartner.email ?? ""}
-                        onChange={(event) =>
-                          setEditingPartner((current) =>
-                            current ? { ...current, email: event.target.value } : current,
-                          )
-                        }
-                      />
-                    ) : (
-                      partner.email || "—"
-                    )}
-                  </td>
-                  <td className="table-actions">
-                    {editingPartner?.id === partner.id ? (
-                      <>
-                        <button className="primary-button" onClick={handleSavePartner}>
-                          <FiSave /> Lưu
-                        </button>
-                        <button className="ghost-button" onClick={() => setEditingPartner(null)}>
-                          Hủy
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="ghost-button"
-                          onClick={() => setEditingPartner(partner)}
-                        >
-                          <FiEdit2 /> Chỉnh sửa
-                        </button>
-                        <button
-                          className="ghost-button"
-                          onClick={() => removePartner(partner.id)}
-                        >
-                          Xóa
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="form-grid">
-          <label>
-            <span>Tên</span>
-            <input
-              value={partnerForm.name}
-              onChange={(event) =>
-                setPartnerForm((current) => ({ ...current, name: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            <span>Người liên hệ</span>
-            <input
-              value={partnerForm.contactName}
-              onChange={(event) =>
-                setPartnerForm((current) => ({
-                  ...current,
-                  contactName: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <label>
-            <span>Điện thoại</span>
-            <input
-              value={partnerForm.phone}
-              onChange={(event) =>
-                setPartnerForm((current) => ({ ...current, phone: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            <span>Email</span>
-            <input
-              value={partnerForm.email}
-              onChange={(event) =>
-                setPartnerForm((current) => ({ ...current, email: event.target.value }))
-              }
-            />
-          </label>
-        </div>
-        <button className="primary-button" onClick={handleAddPartner}>
-          <FiPlus /> Thêm đối tác
         </button>
       </div>
     </div>

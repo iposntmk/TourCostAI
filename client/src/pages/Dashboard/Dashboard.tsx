@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { FiCalendar, FiDownload, FiFilter, FiPlus, FiSearch } from "react-icons/fi";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FiCalendar, FiDownload, FiFilter, FiList, FiPlus, FiSearch } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { PageHeader } from "../../components/common/PageHeader";
@@ -12,6 +12,17 @@ import { formatCurrency, formatDate } from "../../utils/format";
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
+const columnOptions = [
+  { key: "tour", label: "Tour" },
+  { key: "dates", label: "Ngày" },
+  { key: "guide", label: "Hướng dẫn viên" },
+  { key: "financial", label: "Tổng quan tài chính" },
+  { key: "adjustments", label: "Điều chỉnh" },
+  { key: "actions", label: "Thao tác" },
+] as const;
+
+type ColumnKey = (typeof columnOptions)[number]["key"];
+
 export const Dashboard = () => {
   const navigate = useNavigate();
   const { tours } = useTours();
@@ -20,6 +31,28 @@ export const Dashboard = () => {
   const [guideFilter, setGuideFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() =>
+    columnOptions.reduce(
+      (acc, column) => ({ ...acc, [column.key]: true }),
+      {} as Record<ColumnKey, boolean>,
+    ),
+  );
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const columnToggleRef = useRef<HTMLDivElement | null>(null);
+
+  const handleToggleColumn = (columnKey: ColumnKey) => {
+    setVisibleColumns((current) => {
+      const next = { ...current, [columnKey]: !current[columnKey] };
+      return Object.values(next).some(Boolean) ? next : current;
+    });
+  };
+
+  const activeColumns = useMemo(
+    () => columnOptions.filter((column) => visibleColumns[column.key]),
+    [visibleColumns],
+  );
+  const emptyStateColSpan = activeColumns.length || columnOptions.length;
 
   const filteredTours = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -42,15 +75,59 @@ export const Dashboard = () => {
     });
   }, [tours, searchTerm, guideFilter, fromDate, toDate]);
 
-  const upcomingTours = useMemo(
-    () =>
-      tours.filter((tour) => new Date(tour.general.startDate) >= today).sort(
-        (a, b) =>
-          new Date(a.general.startDate).getTime() -
-          new Date(b.general.startDate).getTime(),
-      ),
-    [tours],
-  );
+  const pendingSettlements = useMemo(() => {
+    const unsettled = tours.filter(
+      (tour) => Math.abs(tour.financials.differenceToAdvance) > 0,
+    );
+    return unsettled.sort((a, b) => {
+      const aEnd = new Date(a.general.endDate).getTime();
+      const bEnd = new Date(b.general.endDate).getTime();
+      if (Number.isNaN(aEnd) || Number.isNaN(bEnd) || aEnd === bEnd) {
+        return (
+          Math.abs(b.financials.differenceToAdvance) -
+          Math.abs(a.financials.differenceToAdvance)
+        );
+      }
+      return aEnd - bEnd;
+    });
+  }, [tours]);
+
+  useEffect(() => {
+    if (!showColumnPicker) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        columnToggleRef.current &&
+        !columnToggleRef.current.contains(event.target as Node)
+      ) {
+        setShowColumnPicker(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowColumnPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showColumnPicker]);
+
+  const describeDifference = (difference: number) => {
+    if (difference > 0) {
+      return `Hoàn về công ty ${formatCurrency(difference)}`;
+    }
+    if (difference < 0) {
+      return `Công ty bù thêm ${formatCurrency(Math.abs(difference))}`;
+    }
+    return "Đã cân bằng";
+  };
 
   const totalSpend = useMemo(
     () => tours.reduce((total, tour) => total + tour.financials.totalCost, 0),
@@ -116,12 +193,12 @@ export const Dashboard = () => {
           accent="blue"
         />
         <StatCard
-          label="Chuyến khởi hành sắp tới"
-          value={String(upcomingTours.length)}
+          label="Tour cần quyết toán"
+          value={String(pendingSettlements.length)}
           trend={
-            upcomingTours[0]
-              ? `Chuyến tiếp theo: ${formatDate(upcomingTours[0].general.startDate)}`
-              : "Không có tour sắp khởi hành"
+            pendingSettlements[0]
+              ? describeDifference(pendingSettlements[0].financials.differenceToAdvance)
+              : "Tất cả tour đã cân bằng"
           }
           icon={<FiCalendar />}
           accent="green"
@@ -194,6 +271,33 @@ export const Dashboard = () => {
                 onChange={(event) => setToDate(event.target.value)}
               />
             </div>
+            <div className="filter-field column-toggle" ref={columnToggleRef}>
+              <label htmlFor="column-picker">Cột hiển thị</label>
+              <button
+                id="column-picker"
+                type="button"
+                className="ghost-button"
+                onClick={() => setShowColumnPicker((current) => !current)}
+                aria-expanded={showColumnPicker}
+                aria-haspopup="true"
+              >
+                <FiList /> Chọn cột
+              </button>
+              {showColumnPicker && (
+                <div className="column-selector-panel">
+                  {columnOptions.map((column) => (
+                    <label key={column.key}>
+                      <input
+                        type="checkbox"
+                        checked={visibleColumns[column.key]}
+                        onChange={() => handleToggleColumn(column.key)}
+                      />
+                      {column.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
             <button className="ghost-button" onClick={handleExport}>
               <FiDownload /> Xuất Excel
             </button>
@@ -204,18 +308,18 @@ export const Dashboard = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Tour</th>
-                  <th>Ngày</th>
-                  <th>Hướng dẫn viên</th>
-                  <th>Tổng quan tài chính</th>
-                  <th>Điều chỉnh</th>
-                  <th></th>
+                  {visibleColumns.tour && <th>Tour</th>}
+                  {visibleColumns.dates && <th>Ngày</th>}
+                  {visibleColumns.guide && <th>Hướng dẫn viên</th>}
+                  {visibleColumns.financial && <th>Tổng quan tài chính</th>}
+                  {visibleColumns.adjustments && <th>Điều chỉnh</th>}
+                  {visibleColumns.actions && <th></th>}
                 </tr>
               </thead>
               <tbody>
                 {filteredTours.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="empty-state">
+                    <td colSpan={emptyStateColSpan} className="empty-state">
                       Không có tour nào phù hợp với bộ lọc hiện tại.
                     </td>
                   </tr>
@@ -229,49 +333,61 @@ export const Dashboard = () => {
                   );
                   return (
                     <tr key={tour.id}>
-                      <td>
-                        <div className="table-primary">
-                          <div className="table-title">{tour.general.code}</div>
-                          <div className="table-subtitle">
-                            {tour.general.customerName} · {tour.general.pax} khách
+                      {visibleColumns.tour && (
+                        <td>
+                          <div className="table-primary">
+                            <div className="table-title">{tour.general.code}</div>
+                            <div className="table-subtitle">
+                              {tour.general.customerName} · {tour.general.pax} khách
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="table-primary">
-                          <div>{formatDate(tour.general.startDate)}</div>
-                          <div className="table-subtitle">
-                            đến {formatDate(tour.general.endDate)}
+                        </td>
+                      )}
+                      {visibleColumns.dates && (
+                        <td>
+                          <div className="table-primary">
+                            <div>{formatDate(tour.general.startDate)}</div>
+                            <div className="table-subtitle">
+                              đến {formatDate(tour.general.endDate)}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="table-primary">
-                          <div>{guide?.name ?? "Chưa phân công"}</div>
-                          <div className="table-subtitle">Tài xế: {tour.general.driverName}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="table-primary">
-                          <div>{formatCurrency(tour.financials.totalCost)}</div>
-                          <div className="table-subtitle">
-                            Tạm ứng: {formatCurrency(tour.financials.advance)}
+                        </td>
+                      )}
+                      {visibleColumns.guide && (
+                        <td>
+                          <div className="table-primary">
+                            <div>{guide?.name ?? "Chưa phân công"}</div>
+                            <div className="table-subtitle">Tài xế: {tour.general.driverName}</div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`tag ${corrections.length ? "warning" : "success"}`}>
-                          {corrections.length ? `${corrections.length} điều chỉnh` : "Tất cả khớp"}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="ghost-button"
-                          onClick={() => navigate(`/tour/${tour.id}`)}
-                        >
-                          Xem
-                        </button>
-                      </td>
+                        </td>
+                      )}
+                      {visibleColumns.financial && (
+                        <td>
+                          <div className="table-primary">
+                            <div>{formatCurrency(tour.financials.totalCost)}</div>
+                            <div className="table-subtitle">
+                              Tạm ứng: {formatCurrency(tour.financials.advance)}
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.adjustments && (
+                        <td>
+                          <span className={`tag ${corrections.length ? "warning" : "success"}`}>
+                            {corrections.length ? `${corrections.length} điều chỉnh` : "Tất cả khớp"}
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.actions && (
+                        <td>
+                          <button
+                            className="ghost-button"
+                            onClick={() => navigate(`/tour/${tour.id}`)}
+                          >
+                            Xem
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
