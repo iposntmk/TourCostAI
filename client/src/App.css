@@ -7,6 +7,7 @@
   --color-surface: rgba(255, 255, 255, 0.85);
   --shadow-md: 0 12px 32px rgba(37, 99, 235, 0.1);
   --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.2);
   --radius-lg: 24px;
   --radius-md: 16px;
   --radius-sm: 10px;
@@ -538,6 +539,7 @@
   margin: 0;
   display: grid;
   gap: 1rem;
+  grid-template-columns: 1fr;
 }
 
 .itinerary-preview-day {
@@ -545,8 +547,22 @@
   border-radius: var(--radius-md);
   background: rgba(226, 232, 240, 0.45);
   border: 1px solid rgba(148, 163, 184, 0.2);
-  display: grid;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+@media (min-width: 1024px) {
+  .itinerary-preview ul {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: stretch;
+  }
+
+  .itinerary-detail {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: stretch;
+  }
 }
 
 .itinerary-preview-header {
@@ -648,6 +664,7 @@
 .itinerary-detail {
   display: grid;
   gap: 1rem;
+  grid-template-columns: 1fr;
 }
 
 .itinerary-card {
@@ -656,7 +673,15 @@
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow-sm);
   padding: 1rem 1.25rem;
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.itinerary-card-body {
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
@@ -666,10 +691,145 @@
   align-items: center;
 }
 
-.itinerary-card-body ul {
-  margin: 0.5rem 0 0;
+.itinerary-activities {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.activities-list {
+  margin: 0.35rem 0 0;
   padding-left: 1.2rem;
   color: #475569;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.day-section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.day-services {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.day-services-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-services-count {
+  font-size: 0.75rem;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-weight: 600;
+}
+
+.day-services-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.day-service-item {
+  position: relative;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 0.65rem 0.75rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.day-service-item:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.day-service-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.service-meta {
+  font-size: 0.8rem;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.service-tooltip {
+  position: absolute;
+  bottom: calc(100% + 0.55rem);
+  left: 0;
+  min-width: 220px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.service-tooltip p {
+  margin: 0.2rem 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.day-service-item:hover .service-tooltip,
+.day-service-item:focus .service-tooltip,
+.day-service-item:focus-within .service-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+@media (hover: none) {
+  .day-service-item {
+    cursor: default;
+  }
+
+  .service-tooltip {
+    display: none;
+  }
+}
+
+.empty-services {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.service-discrepancy {
+  margin-left: 0.35rem;
+  font-weight: 600;
+}
+
+.service-discrepancy.positive {
+  color: var(--color-success);
+}
+
+.service-discrepancy.negative {
+  color: var(--color-danger);
 }
 
 .summary-grid {

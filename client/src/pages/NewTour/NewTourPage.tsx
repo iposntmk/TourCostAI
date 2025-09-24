@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertTriangle,
   FiCheckCircle,
   FiFilePlus,
+  FiFileText,
   FiRefreshCw,
   FiUploadCloud,
 } from "react-icons/fi";
@@ -10,33 +11,44 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useMasterData } from "../../contexts/MasterDataContext";
 import { useTours } from "../../contexts/TourContext";
-import type { Expense, FinancialSummary, MatchedService } from "../../types";
-import { formatDate, fromInputDateValue, toInputDateValue } from "../../utils/format";
+import type {
+  Expense,
+  ExtractionResult,
+  FinancialSummary,
+  MatchedService,
+  Tour,
+  TourService,
+} from "../../types";
+import {
+  formatCurrency,
+  formatDate,
+  fromInputDateValue,
+  toInputDateValue,
+} from "../../utils/format";
 import {
   buildTourServices,
   matchExtractedServices,
   simulateGeminiExtraction,
 } from "../../utils/extraction";
 import { generateId } from "../../utils/ids";
+import { groupServicesByItinerary } from "../../utils/itinerary";
+
+const initialFinancialSummary: FinancialSummary = {
+  advance: 0,
+  collectionsForCompany: 0,
+  companyTip: 0,
+  totalCost: 0,
+  differenceToAdvance: 0,
+};
 
 export const NewTourPage = () => {
   const navigate = useNavigate();
   const { masterData, findGuideByName } = useMasterData();
   const { createTour } = useTours();
 
-  const [fileName, setFileName] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [extractionNotes, setExtractionNotes] = useState<string | null>(null);
-  const [matches, setMatches] = useState<MatchedService[]>([]);
-  const [otherExpenses, setOtherExpenses] = useState<Expense[]>([]);
-  const [financials, setFinancials] = useState<FinancialSummary>({
-    advance: 0,
-    collectionsForCompany: 0,
-    companyTip: 0,
-    totalCost: 0,
-    differenceToAdvance: 0,
-  });
-  const [general, setGeneral] = useState({
+  const jsonInputRef = useRef<HTMLInputElement | null>(null);
+
+  const createInitialGeneral = () => ({
     code: "",
     customerName: "",
     clientCompany: "",
@@ -48,77 +60,231 @@ export const NewTourPage = () => {
     driverName: "",
     notes: "",
   });
+
+  const [uploadSource, setUploadSource] = useState<
+    { name: string; type: "image" | "json" }
+  | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [extractionNotes, setExtractionNotes] = useState<string | null>(null);
+  const [matches, setMatches] = useState<MatchedService[]>([]);
+  const [otherExpenses, setOtherExpenses] = useState<Expense[]>([]);
+  const [financials, setFinancials] = useState<FinancialSummary>(() => ({
+    ...initialFinancialSummary,
+  }));
+  const [general, setGeneral] = useState(createInitialGeneral);
   const [itinerary, setItinerary] = useState(
     [] as { id: string; day: number; date: string; location: string; activities: string[] }[],
   );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!fileName) {
+    if (!uploadSource) {
       setExtractionNotes(null);
     }
-  }, [fileName]);
+  }, [uploadSource]);
+
+  const resetFormState = () => {
+    setGeneral(createInitialGeneral());
+    setMatches([]);
+    setItinerary([]);
+    setOtherExpenses([]);
+    setFinancials({ ...initialFinancialSummary });
+  };
+
+  const isExtractionResult = (value: unknown): value is ExtractionResult => {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Partial<ExtractionResult>;
+    return (
+      !!candidate.general &&
+      typeof candidate.general === "object" &&
+      Array.isArray(candidate.services) &&
+      Array.isArray(candidate.itinerary) &&
+      Array.isArray(candidate.otherExpenses)
+    );
+  };
+
+  const isTour = (value: unknown): value is Tour => {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Partial<Tour>;
+    return (
+      !!candidate.general &&
+      typeof candidate.general === "object" &&
+      Array.isArray(candidate.itinerary) &&
+      Array.isArray(candidate.services) &&
+      Array.isArray(candidate.perDiem) &&
+      Array.isArray(candidate.otherExpenses) &&
+      !!candidate.financials
+    );
+  };
+
+  const applyExtraction = (
+    extraction: ExtractionResult,
+    options?: { note?: string },
+  ) => {
+    const matchedGuide = findGuideByName(extraction.general.guideName);
+    setMatches(matchExtractedServices(extraction, masterData));
+    setGeneral({
+      code: extraction.general.tourCode,
+      customerName: extraction.general.customerName,
+      clientCompany: extraction.general.clientCompany ?? "",
+      nationality: extraction.general.nationality,
+      pax: extraction.general.pax,
+      startDate: extraction.general.startDate,
+      endDate: extraction.general.endDate,
+      guideId: matchedGuide?.id ?? "",
+      driverName: extraction.general.driverName,
+      notes: extraction.general.notes ?? "",
+    });
+    setOtherExpenses(
+      extraction.otherExpenses.map((expense) => ({
+        id: generateId(),
+        description: expense.description,
+        amount: expense.amount,
+        date: expense.date,
+        notes: expense.notes,
+      })),
+    );
+    setFinancials({
+      advance: extraction.advance ?? 0,
+      collectionsForCompany: extraction.collectionsForCompany ?? 0,
+      companyTip: extraction.companyTip ?? 0,
+      totalCost: 0,
+      differenceToAdvance: 0,
+    });
+    setItinerary(
+      extraction.itinerary.map((item) => ({
+        id: generateId(),
+        day: item.day,
+        date: item.date,
+        location: item.location,
+        activities: item.activities,
+      })),
+    );
+    const message =
+      options?.note ??
+      `Google Gemini đã trích xuất thành công ${extraction.services.length} dịch vụ và ${extraction.itinerary.length} ngày lịch trình từ chương trình đã tải lên.`;
+    setExtractionNotes(message);
+  };
 
   const corrections = useMemo(
     () => matches.filter((item) => Math.abs(item.discrepancy) > 0),
     [matches],
   );
 
+  const previewServiceGroups = useMemo(() => {
+    if (!itinerary.length || !matches.length) {
+      return {} as Record<string, TourService[]>;
+    }
+    const previewServices: TourService[] = matches.map((match, index) => ({
+      id: `${match.service?.id ?? "candidate"}-${index}`,
+      serviceId: match.service?.id ?? `candidate-${index}`,
+      description: match.service?.name ?? match.candidate.rawName,
+      quantity: match.candidate.quantity,
+      unitPrice: match.normalizedPrice,
+      sourcePrice: match.candidate.price,
+      discrepancy: match.normalizedPrice - match.candidate.price,
+      notes: match.service?.description ?? match.candidate.notes,
+    }));
+    return groupServicesByItinerary(itinerary, previewServices);
+  }, [itinerary, matches]);
+
   const handleRunExtraction = () => {
+    if (uploadSource?.type !== "image") return;
     setProcessing(true);
     setError(null);
     setTimeout(() => {
       const extraction = simulateGeminiExtraction(masterData);
-      const matchedGuide = findGuideByName(extraction.general.guideName);
-      setMatches(matchExtractedServices(extraction, masterData));
-      setGeneral({
-        code: extraction.general.tourCode,
-        customerName: extraction.general.customerName,
-        clientCompany: extraction.general.clientCompany ?? "",
-        nationality: extraction.general.nationality,
-        pax: extraction.general.pax,
-        startDate: extraction.general.startDate,
-        endDate: extraction.general.endDate,
-        guideId: matchedGuide?.id ?? "",
-        driverName: extraction.general.driverName,
-        notes: extraction.general.notes ?? "",
-      });
-      setOtherExpenses(
-        extraction.otherExpenses.map((expense) => ({
-          id: generateId(),
-          description: expense.description,
-          amount: expense.amount,
-          date: expense.date,
-          notes: expense.notes,
-        })),
-      );
-      setFinancials({
-        advance: extraction.advance ?? 0,
-        collectionsForCompany: extraction.collectionsForCompany ?? 0,
-        companyTip: extraction.companyTip ?? 0,
-        totalCost: 0,
-        differenceToAdvance: 0,
-      });
-      setItinerary(
-        extraction.itinerary.map((item) => ({
-          id: generateId(),
-          day: item.day,
-          date: item.date,
-          location: item.location,
-          activities: item.activities,
-        })),
-      );
-      setExtractionNotes(
-        `Google Gemini đã trích xuất thành công ${extraction.services.length} dịch vụ và ${extraction.itinerary.length} ngày lịch trình từ chương trình đã tải lên.`,
-      );
+      applyExtraction(extraction);
       setProcessing(false);
     }, 900);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files?.[0]) {
-      setFileName(event.target.files[0].name);
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadSource({ name: file.name, type: "image" });
+    setError(null);
+    setExtractionNotes(null);
+  };
+
+  const handleJsonImport = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+      const noteParts: string[] = [];
+      let extractionToApply: ExtractionResult | null = null;
+
+      const importTour = (tourData: Tour) => {
+        createTour({
+          general: tourData.general,
+          itinerary: tourData.itinerary,
+          services: tourData.services,
+          perDiem: tourData.perDiem,
+          otherExpenses: tourData.otherExpenses,
+          financials: tourData.financials,
+        });
+      };
+
+      if (Array.isArray(parsed)) {
+        const toursInFile = parsed.filter(isTour) as Tour[];
+        const extractionsInFile = parsed.filter(isExtractionResult) as ExtractionResult[];
+
+        if (toursInFile.length > 0) {
+          toursInFile.forEach(importTour);
+          resetFormState();
+          noteParts.push(`${toursInFile.length} tour đã được thêm vào hệ thống`);
+        }
+
+        if (extractionsInFile.length > 0) {
+          extractionToApply = extractionsInFile[0];
+        }
+      } else if (isTour(parsed)) {
+        importTour(parsed);
+        resetFormState();
+        noteParts.push(
+          parsed.general?.code
+            ? `Tour ${parsed.general.code} đã được thêm vào hệ thống`
+            : "1 tour đã được thêm vào hệ thống",
+        );
+      } else if (isExtractionResult(parsed)) {
+        extractionToApply = parsed;
+      }
+
+      if (!noteParts.length && !extractionToApply) {
+        throw new Error("Unsupported JSON format");
+      }
+
+      setUploadSource({ name: file.name, type: "json" });
+      setError(null);
+
+      if (extractionToApply) {
+        const messagePrefix = noteParts.length
+          ? `${noteParts.join(". ")}. `
+          : "";
+        applyExtraction(extractionToApply, {
+          note: `${messagePrefix}Tệp JSON ${file.name} đã nạp ${extractionToApply.services.length} dịch vụ và ${extractionToApply.itinerary.length} ngày lịch trình vào biểu mẫu kiểm tra.`,
+        });
+      } else if (noteParts.length) {
+        setExtractionNotes(`${noteParts.join(". ")} từ ${file.name}.`);
+      }
+    } catch (jsonError) {
+      console.error("Failed to import tour JSON", jsonError);
+      setError("Không thể đọc tệp JSON. Vui lòng kiểm tra định dạng.");
+    } finally {
+      event.target.value = "";
     }
+  };
+
+  const handleReset = () => {
+    setUploadSource(null);
+    setProcessing(false);
+    setError(null);
+    setExtractionNotes(null);
+    resetFormState();
   };
 
   const updateMatchService = (index: number, next: Partial<MatchedService>) => {
@@ -265,6 +431,9 @@ export const NewTourPage = () => {
             <p className="panel-description">
               Định dạng hỗ trợ: JPG, PNG, PDF. Công cụ AI đọc được tài liệu nhiều trang và nhận diện giá, hướng dẫn viên, dịch vụ cùng ghi chú.
             </p>
+            <p className="panel-description">
+              Hoặc tải tệp JSON đã chuẩn hóa để thêm tour hàng loạt hoặc điền sẵn dữ liệu kiểm tra trước khi xác nhận.
+            </p>
           </div>
           <div className="panel-body upload-zone">
             <label className="upload-dropzone">
@@ -276,30 +445,38 @@ export const NewTourPage = () => {
               />
               <FiFilePlus size={36} />
               <span>
-                {fileName
-                  ? `Đã chọn tệp: ${fileName}`
+                {uploadSource
+                  ? uploadSource.type === "json"
+                    ? `Đã chọn tệp JSON: ${uploadSource.name}`
+                    : `Đã chọn tệp: ${uploadSource.name}`
                   : "Kéo thả hoặc nhấp để chọn hình ảnh chương trình tour"}
               </span>
             </label>
             <div className="upload-actions">
               <button
                 className="primary-button"
-                disabled={!fileName || processing}
+                disabled={uploadSource?.type !== "image" || processing}
                 onClick={handleRunExtraction}
+                type="button"
               >
                 {processing ? <FiRefreshCw className="spin" /> : <FiUploadCloud />} Chạy trích xuất Gemini
               </button>
-              {fileName && (
-                <button
-                  className="ghost-button"
-                  onClick={() => {
-                    setFileName("");
-                    setMatches([]);
-                    setOtherExpenses([]);
-                    setProcessing(false);
-                    setExtractionNotes(null);
-                  }}
-                >
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => jsonInputRef.current?.click()}
+              >
+                <FiFileText /> Nhập JSON
+              </button>
+              <input
+                ref={jsonInputRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={handleJsonImport}
+              />
+              {(uploadSource || matches.length > 0 || itinerary.length > 0 || otherExpenses.length > 0) && (
+                <button className="ghost-button" type="button" onClick={handleReset}>
                   Đặt lại
                 </button>
               )}
@@ -552,20 +729,60 @@ export const NewTourPage = () => {
               <div className="itinerary-preview">
                 <h3 className="section-title">Xem trước lịch trình</h3>
                 <ul>
-                  {itinerary.map((item) => (
-                    <li key={item.id}>
-                      <div className="itinerary-preview-day">
-                        <div className="itinerary-preview-header">
-                          <span className="badge">Ngày {item.day}</span>
-                          <span>{formatDate(item.date)}</span>
+                  {itinerary.map((item) => {
+                    const dayServices = previewServiceGroups[item.id] ?? [];
+                    return (
+                      <li key={item.id}>
+                        <div className="itinerary-preview-day">
+                          <div className="itinerary-preview-header">
+                            <span className="badge">Ngày {item.day}</span>
+                            <span>{formatDate(item.date)}</span>
+                          </div>
+                          <div className="itinerary-preview-body">
+                            <strong>{item.location}</strong>
+                            <p>{item.activities.join(", ")}</p>
+                          </div>
+                          <div className="day-services">
+                            <div className="day-services-header">
+                              <span className="day-section-label">Dịch vụ</span>
+                              <span className="day-services-count">{dayServices.length} mục</span>
+                            </div>
+                            {dayServices.length > 0 ? (
+                              <ul className="day-services-list">
+                                {dayServices.map((service) => {
+                                  const discrepancy = service.discrepancy ?? 0;
+                                  const sourcePrice = service.sourcePrice ?? service.unitPrice;
+                                  return (
+                                    <li key={service.id} className="day-service-item" tabIndex={0}>
+                                      <div className="day-service-row">
+                                        <span>{service.description}</span>
+                                        <span className="service-meta">
+                                          {service.quantity} × {formatCurrency(service.unitPrice)}
+                                        </span>
+                                      </div>
+                                      <div className="service-tooltip">
+                                        <p>Giá tài liệu: {formatCurrency(sourcePrice)}</p>
+                                        <p>Giá chuẩn: {formatCurrency(service.unitPrice)}</p>
+                                        {service.notes && <p>{service.notes}</p>}
+                                        {discrepancy !== 0 && (
+                                          <p>
+                                            Chênh lệch:{" "}
+                                            <strong>{formatCurrency(discrepancy)}</strong>
+                                          </p>
+                                        )}
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : (
+                              <p className="empty-services">Chưa có dịch vụ khớp cho ngày này.</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="itinerary-preview-body">
-                          <strong>{item.location}</strong>
-                          <p>{item.activities.join(", ")}</p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
