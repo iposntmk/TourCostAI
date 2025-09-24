@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   FiAlertTriangle,
   FiArrowLeft,
@@ -25,6 +25,7 @@ import {
   toInputDateValue,
 } from "../../utils/format";
 import { generateId } from "../../utils/ids";
+import { groupServicesByItinerary } from "../../utils/itinerary";
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "general", label: "Thông tin chung" },
@@ -80,6 +81,16 @@ export const TourDetailPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [editableTour, setEditableTour] = useState<Tour | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const baseTour = editMode && editableTour ? editableTour : tour;
+
+  const servicesByDay = useMemo(
+    () =>
+      baseTour
+        ? groupServicesByItinerary(baseTour.itinerary, baseTour.services)
+        : {},
+    [baseTour],
+  );
 
   if (!tour) {
     return (
@@ -437,52 +448,102 @@ export const TourDetailPage = () => {
 
   const renderItinerary = () => (
     <div className="itinerary-detail">
-      {displayTour.itinerary.map((item) => (
-        <div key={item.id} className="itinerary-card">
-          <div className="itinerary-card-header">
-            <span className="badge">Ngày {item.day}</span>
-            {editMode ? (
-              <input
-                type="date"
-                value={toInputDateValue(item.date)}
-                onChange={(event) =>
-                  handleItineraryChange(item.id, "date", event.target.value)
-                }
-              />
-            ) : (
-              <span>{formatDate(item.date)}</span>
-            )}
+      {displayTour.itinerary.map((item) => {
+        const dayServices = servicesByDay[item.id] ?? [];
+        const serviceCount = dayServices.length;
+        return (
+          <div key={item.id} className="itinerary-card">
+            <div className="itinerary-card-header">
+              <span className="badge">Ngày {item.day}</span>
+              {editMode ? (
+                <input
+                  type="date"
+                  value={toInputDateValue(item.date)}
+                  onChange={(event) =>
+                    handleItineraryChange(item.id, "date", event.target.value)
+                  }
+                />
+              ) : (
+                <span>{formatDate(item.date)}</span>
+              )}
+            </div>
+            <div className="itinerary-card-body">
+              {editMode ? (
+                <input
+                  value={item.location}
+                  maxLength={120}
+                  onChange={(event) =>
+                    handleItineraryChange(item.id, "location", event.target.value)
+                  }
+                />
+              ) : (
+                <strong>{item.location}</strong>
+              )}
+              <div className="itinerary-activities">
+                <span className="day-section-label">Hoạt động</span>
+                {editMode ? (
+                  <textarea
+                    rows={3}
+                    value={item.activities.join("\n")}
+                    onChange={(event) =>
+                      handleItineraryChange(item.id, "activities", event.target.value)
+                    }
+                  />
+                ) : (
+                  <ul className="activities-list">
+                    {item.activities.map((activity) => (
+                      <li key={activity}>{activity}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="day-services">
+                <div className="day-services-header">
+                  <span className="day-section-label">Dịch vụ</span>
+                  <span className="day-services-count">{serviceCount} mục</span>
+                </div>
+                {serviceCount > 0 ? (
+                  <ul className="day-services-list">
+                    {dayServices.map((service) => {
+                      const discrepancy = service.discrepancy ?? 0;
+                      const sourcePrice = service.sourcePrice ?? service.unitPrice;
+                      return (
+                        <li key={service.id} className="day-service-item" tabIndex={0}>
+                          <div className="day-service-row">
+                            <span>{service.description}</span>
+                            <span className="service-meta">
+                              {service.quantity} × {formatCurrency(service.unitPrice)}
+                            </span>
+                          </div>
+                          <div className="service-tooltip">
+                            <p>Giá tài liệu: {formatCurrency(sourcePrice)}</p>
+                            <p>Giá chuẩn: {formatCurrency(service.unitPrice)}</p>
+                            {service.notes && <p>{service.notes}</p>}
+                          {discrepancy !== 0 && (
+                            <p>
+                              Chênh lệch:{" "}
+                              <strong
+                                className={`service-discrepancy ${
+                                  discrepancy > 0 ? "positive" : "negative"
+                                }`}
+                              >
+                                  {formatCurrency(discrepancy)}
+                                </strong>
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="empty-services">Chưa có dịch vụ nào gán cho ngày này.</p>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="itinerary-card-body">
-            {editMode ? (
-              <input
-                value={item.location}
-                maxLength={120}
-                onChange={(event) =>
-                  handleItineraryChange(item.id, "location", event.target.value)
-                }
-              />
-            ) : (
-              <strong>{item.location}</strong>
-            )}
-            {editMode ? (
-              <textarea
-                rows={3}
-                value={item.activities.join("\n")}
-                onChange={(event) =>
-                  handleItineraryChange(item.id, "activities", event.target.value)
-                }
-              />
-            ) : (
-              <ul>
-                {item.activities.map((activity) => (
-                  <li key={activity}>{activity}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 
