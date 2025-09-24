@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertTriangle,
   FiCheckCircle,
+  FiDownload,
   FiFilePlus,
   FiFileText,
   FiRefreshCw,
@@ -434,6 +435,9 @@ export const NewTourPage = () => {
             <p className="panel-description">
               Hoặc tải tệp JSON đã chuẩn hóa để thêm tour hàng loạt hoặc điền sẵn dữ liệu kiểm tra trước khi xác nhận.
             </p>
+            <p className="panel-description">
+              Nhấn nút Tải JSON mẫu để tải về ví dụ đúng cấu trúc cho quá trình nhập liệu.
+            </p>
           </div>
           <div className="panel-body upload-zone">
             <label className="upload-dropzone">
@@ -475,6 +479,13 @@ export const NewTourPage = () => {
                 hidden
                 onChange={handleJsonImport}
               />
+              <a
+                className="ghost-button"
+                href="/samples/tour-import-sample.json"
+                download="tour-import-sample.json"
+              >
+                <FiDownload /> Tải JSON mẫu
+              </a>
               {(uploadSource || matches.length > 0 || itinerary.length > 0 || otherExpenses.length > 0) && (
                 <button className="ghost-button" type="button" onClick={handleReset}>
                   Đặt lại
