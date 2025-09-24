@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { MasterDataProvider } from "./contexts/MasterDataContext";
+import { GeneralOverridesProvider } from "./contexts/GeneralOverridesContext";
 import { TourProvider } from "./contexts/TourContext";
 import { Dashboard } from "./pages/Dashboard/Dashboard";
 import { MasterDataPage } from "./pages/MasterData/MasterDataPage";
@@ -24,18 +25,20 @@ function App() {
   return (
     <BrowserRouter>
       <MasterDataProvider>
-        <TourProvider>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/new" element={<NewTourPage />} />
-              <Route path="/tour/:id" element={<TourDetailPage />} />
-              <Route path="/master-data" element={<MasterDataPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
-        </TourProvider>
+        <GeneralOverridesProvider>
+          <TourProvider>
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/new" element={<NewTourPage />} />
+                <Route path="/tour/:id" element={<TourDetailPage />} />
+                <Route path="/master-data" element={<MasterDataPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AppLayout>
+          </TourProvider>
+        </GeneralOverridesProvider>
       </MasterDataProvider>
     </BrowserRouter>
   );

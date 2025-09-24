@@ -3,27 +3,33 @@ import {
   FiAlertTriangle,
   FiBookOpen,
   FiCheckCircle,
+  FiCopy,
   FiDownload,
   FiEdit,
   FiFilePlus,
   FiFileText,
   FiInfo,
+  FiPlusCircle,
   FiRefreshCw,
   FiSliders,
+  FiTrash,
   FiUploadCloud,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { JsonViewer } from "../../components/common/JsonViewer";
+import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { PromptManager } from "../../components/common/PromptManager";
 import { PromptConfirmationModal } from "../../components/common/PromptConfirmationModal";
 import { useMasterData } from "../../contexts/MasterDataContext";
 import { useTours } from "../../contexts/TourContext";
+import { useGeneralOverrides } from "../../contexts/GeneralOverridesContext";
 import type {
   Expense,
   ExtractionGeneralInfo,
   ExtractionResult,
   FinancialSummary,
+  GeneralOverridePresetInput,
   MatchedService,
   Tour,
   TourService,
@@ -45,6 +51,7 @@ import { generateId } from "../../utils/ids";
 import { groupServicesByItinerary } from "../../utils/itinerary";
 
 type GeneralOverridesFormState = {
+  name: string;
   tourCode: string;
   customerName: string;
   clientCompany: string;
@@ -125,6 +132,15 @@ export const NewTourPage = () => {
   const navigate = useNavigate();
   const { masterData, findGuideByName } = useMasterData();
   const { createTour } = useTours();
+  const {
+    presets: generalOverridePresets,
+    isLoading: generalOverridesLoading,
+    error: generalOverridesError,
+    createPreset: createGeneralOverridePreset,
+    updatePreset: updateGeneralOverridePreset,
+    deletePreset: deleteGeneralOverridePreset,
+    duplicatePreset: duplicateGeneralOverridePreset,
+  } = useGeneralOverrides();
 
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -143,6 +159,7 @@ export const NewTourPage = () => {
   });
 
   const createInitialGeneralOverrides = (): GeneralOverridesFormState => ({
+    name: "",
     tourCode: "",
     customerName: "",
     clientCompany: "",
@@ -178,49 +195,100 @@ export const NewTourPage = () => {
   const [generalOverridesForm, setGeneralOverridesForm] = useState<GeneralOverridesFormState>(
     createInitialGeneralOverrides,
   );
+  const [selectedOverrideId, setSelectedOverrideId] = useState<string | null>(null);
+  const [showDeleteOverrideDialog, setShowDeleteOverrideDialog] = useState(false);
+  const [isDeletingOverride, setIsDeletingOverride] = useState(false);
+
+  useEffect(() => {
+    if (generalOverridePresets.length === 0) {
+      if (selectedOverrideId !== null) {
+        setSelectedOverrideId(null);
+      }
+      return;
+    }
+
+    if (selectedOverrideId === null) {
+      setSelectedOverrideId(generalOverridePresets[0].id);
+    }
+  }, [generalOverridePresets, selectedOverrideId]);
+
+  const selectedOverride = useMemo(
+    () =>
+      generalOverridePresets.find(
+        (preset) => preset.id === (selectedOverrideId ?? ""),
+      ),
+    [generalOverridePresets, selectedOverrideId],
+  );
 
   const generalOverrides = useMemo<Partial<ExtractionGeneralInfo>>(() => {
-    const overrides: Partial<ExtractionGeneralInfo> = {};
-    const trimmed = (value: string) => value.trim();
+    if (!selectedOverride) {
+      return {};
+    }
 
-    if (trimmed(generalOverridesForm.tourCode)) {
-      overrides.tourCode = trimmed(generalOverridesForm.tourCode);
+    const overrides: Partial<ExtractionGeneralInfo> = {};
+    const trimmed = (value?: string | null) => value?.trim() ?? "";
+
+    if (trimmed(selectedOverride.tourCode)) {
+      overrides.tourCode = trimmed(selectedOverride.tourCode);
     }
-    if (trimmed(generalOverridesForm.customerName)) {
-      overrides.customerName = trimmed(generalOverridesForm.customerName);
+    if (trimmed(selectedOverride.customerName)) {
+      overrides.customerName = trimmed(selectedOverride.customerName);
     }
-    if (trimmed(generalOverridesForm.clientCompany)) {
-      overrides.clientCompany = trimmed(generalOverridesForm.clientCompany);
+    if (trimmed(selectedOverride.clientCompany)) {
+      overrides.clientCompany = trimmed(selectedOverride.clientCompany);
     }
-    if (generalOverridesForm.pax !== "") {
-      const parsed = Number(generalOverridesForm.pax);
-      if (!Number.isNaN(parsed)) {
-        overrides.pax = parsed;
-      }
+    if (
+      typeof selectedOverride.pax === "number" &&
+      Number.isFinite(selectedOverride.pax) &&
+      selectedOverride.pax > 0
+    ) {
+      overrides.pax = selectedOverride.pax;
     }
-    if (generalOverridesForm.nationality) {
-      overrides.nationality = generalOverridesForm.nationality;
+    if (trimmed(selectedOverride.nationality)) {
+      overrides.nationality = trimmed(selectedOverride.nationality);
     }
-    if (generalOverridesForm.startDate) {
-      const startIso = fromInputDateValue(generalOverridesForm.startDate);
-      overrides.startDate = startIso || generalOverridesForm.startDate;
+    if (selectedOverride.startDate) {
+      overrides.startDate = selectedOverride.startDate;
     }
-    if (generalOverridesForm.endDate) {
-      const endIso = fromInputDateValue(generalOverridesForm.endDate);
-      overrides.endDate = endIso || generalOverridesForm.endDate;
+    if (selectedOverride.endDate) {
+      overrides.endDate = selectedOverride.endDate;
     }
-    if (trimmed(generalOverridesForm.guideName)) {
-      overrides.guideName = trimmed(generalOverridesForm.guideName);
+    if (trimmed(selectedOverride.guideName)) {
+      overrides.guideName = trimmed(selectedOverride.guideName);
     }
-    if (trimmed(generalOverridesForm.driverName)) {
-      overrides.driverName = trimmed(generalOverridesForm.driverName);
+    if (trimmed(selectedOverride.driverName)) {
+      overrides.driverName = trimmed(selectedOverride.driverName);
     }
-    if (trimmed(generalOverridesForm.notes)) {
-      overrides.notes = trimmed(generalOverridesForm.notes);
+    if (trimmed(selectedOverride.notes)) {
+      overrides.notes = trimmed(selectedOverride.notes);
     }
 
     return overrides;
-  }, [generalOverridesForm]);
+  }, [selectedOverride]);
+
+  useEffect(() => {
+    if (!selectedOverride) {
+      setGeneralOverridesForm(createInitialGeneralOverrides());
+      return;
+    }
+
+    setGeneralOverridesForm({
+      name: selectedOverride.name ?? "",
+      tourCode: selectedOverride.tourCode ?? "",
+      customerName: selectedOverride.customerName ?? "",
+      clientCompany: selectedOverride.clientCompany ?? "",
+      nationality: selectedOverride.nationality ?? "",
+      pax:
+        typeof selectedOverride.pax === "number" && !Number.isNaN(selectedOverride.pax)
+          ? String(selectedOverride.pax)
+          : "",
+      startDate: toInputDateValue(selectedOverride.startDate ?? ""),
+      endDate: toInputDateValue(selectedOverride.endDate ?? ""),
+      guideName: selectedOverride.guideName ?? "",
+      driverName: selectedOverride.driverName ?? "",
+      notes: selectedOverride.notes ?? "",
+    });
+  }, [selectedOverride]);
 
   const generalOverrideCount = useMemo(
     () => Object.keys(generalOverrides).length,
@@ -233,10 +301,103 @@ export const NewTourPage = () => {
     value: GeneralOverridesFormState[K],
   ) => {
     setGeneralOverridesForm((current) => ({ ...current, [field]: value }));
+    if (!selectedOverrideId) {
+      return;
+    }
+
+    const updates: Partial<GeneralOverridePresetInput> = {};
+
+    if (field === "pax") {
+      const parsed = value === "" ? null : Number(value);
+      updates.pax = parsed === null || Number.isFinite(parsed) ? (parsed as number | null) : null;
+    } else if (field === "startDate" || field === "endDate") {
+      if (typeof value === "string" && value) {
+        const iso = fromInputDateValue(value);
+        (updates as Record<string, string>)[field] = iso || value;
+      } else {
+        (updates as Record<string, string>)[field] = "";
+      }
+    } else if (field === "name") {
+      updates.name = typeof value === "string" ? value.trim() : "";
+    } else {
+      updates[field] = typeof value === "string" ? value.trim() : "";
+    }
+
+    void updateGeneralOverridePreset(selectedOverrideId, updates);
   };
 
   const resetGeneralOverrides = () => {
     setGeneralOverridesForm(createInitialGeneralOverrides());
+    if (!selectedOverrideId) {
+      return;
+    }
+
+    void updateGeneralOverridePreset(selectedOverrideId, {
+      tourCode: "",
+      customerName: "",
+      clientCompany: "",
+      nationality: "",
+      pax: null,
+      startDate: "",
+      endDate: "",
+      guideName: "",
+      driverName: "",
+      notes: "",
+    });
+  };
+
+  const handleSelectOverride = (id: string) => {
+    if (!id) {
+      setSelectedOverrideId("");
+      return;
+    }
+    setSelectedOverrideId(id);
+  };
+
+  const handleCreateOverridePreset = async () => {
+    try {
+      const newId = await createGeneralOverridePreset();
+      setSelectedOverrideId(newId);
+    } catch (creationError) {
+      console.error("Failed to create override preset", creationError);
+    }
+  };
+
+  const handleDuplicateOverridePreset = async () => {
+    if (!selectedOverrideId) {
+      return;
+    }
+    try {
+      const duplicatedId = await duplicateGeneralOverridePreset(selectedOverrideId);
+      if (duplicatedId) {
+        setSelectedOverrideId(duplicatedId);
+      }
+    } catch (duplicateError) {
+      console.error("Failed to duplicate override preset", duplicateError);
+    }
+  };
+
+  const handleRequestDeleteOverride = () => {
+    if (!selectedOverrideId) {
+      return;
+    }
+    setShowDeleteOverrideDialog(true);
+  };
+
+  const confirmDeleteOverride = async () => {
+    if (!selectedOverrideId) {
+      return;
+    }
+    setIsDeletingOverride(true);
+    try {
+      await deleteGeneralOverridePreset(selectedOverrideId);
+      setShowDeleteOverrideDialog(false);
+      setSelectedOverrideId(null);
+    } catch (deleteError) {
+      console.error("Failed to delete override preset", deleteError);
+    } finally {
+      setIsDeletingOverride(false);
+    }
   };
 
   useEffect(() => {
@@ -424,7 +585,10 @@ export const NewTourPage = () => {
     try {
       const apiMode = loadApiMode();
       const apiKey = loadApiKey();
-      const overridesToUse = generalOverrideCount ? generalOverrides : undefined;
+      const overridesToUse =
+        selectedOverrideId && selectedOverrideId !== "" && generalOverrideCount
+          ? generalOverrides
+          : undefined;
 
       let extraction: ExtractionResult;
 
@@ -771,6 +935,49 @@ export const NewTourPage = () => {
                   Gemini chuẩn hóa dữ liệu. Để trống nếu muốn AI tự suy luận từ hình ảnh.
                 </p>
               </div>
+              <div className="extraction-hints-controls">
+                <label className="extraction-hints-select">
+                  <span>Tập gợi ý đang dùng</span>
+                  <select
+                    value={selectedOverrideId ?? ""}
+                    onChange={(event) => handleSelectOverride(event.target.value)}
+                    disabled={generalOverridesLoading}
+                  >
+                    <option value="">Không áp dụng gợi ý</option>
+                    {generalOverridePresets.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name?.trim() || "Gợi ý không tên"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="extraction-hints-actions">
+                  <button
+                    type="button"
+                    className="ghost-button small"
+                    onClick={handleCreateOverridePreset}
+                    disabled={generalOverridesLoading}
+                  >
+                    <FiPlusCircle /> Tạo gợi ý
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-button small"
+                    onClick={handleDuplicateOverridePreset}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
+                  >
+                    <FiCopy /> Nhân bản
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-button small"
+                    onClick={handleRequestDeleteOverride}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
+                  >
+                    <FiTrash /> Xóa
+                  </button>
+                </div>
+              </div>
               <div className="extraction-hints-status">
                 <div className="extraction-hints-meta">
                   <span className={`badge${hasGeneralOverrides ? "" : " neutral"}`}>
@@ -778,13 +985,20 @@ export const NewTourPage = () => {
                       ? `${generalOverrideCount} trường gợi ý`
                       : "Chưa có trường gợi ý"}
                   </span>
-                  <small>Áp dụng cho lần chạy Gemini tiếp theo.</small>
+                  <small>
+                    {generalOverridesLoading
+                      ? "Đang tải gợi ý từ Firebase..."
+                      : "Đồng bộ realtime từ Firebase và áp dụng ở lần chạy Gemini tiếp theo."}
+                  </small>
+                  {generalOverridesError && (
+                    <small className="form-error">{generalOverridesError}</small>
+                  )}
                 </div>
                 <button
                   type="button"
                   className="ghost-button small"
                   onClick={resetGeneralOverrides}
-                  disabled={!hasGeneralOverrides}
+                  disabled={!selectedOverrideId || selectedOverrideId === "" || !hasGeneralOverrides}
                 >
                   Xóa gợi ý
                 </button>
@@ -795,6 +1009,16 @@ export const NewTourPage = () => {
                 ))}
               </datalist>
               <div className="form-grid extraction-grid">
+                <label className="full-width">
+                  <span>Tên gợi ý</span>
+                  <small>Đặt tên để dễ nhận biết cấu hình gợi ý.</small>
+                  <input
+                    value={generalOverridesForm.name}
+                    onChange={(event) => updateOverrideField("name", event.target.value)}
+                    placeholder="vd: Đoàn khách công ty ABC"
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
+                  />
+                </label>
                 <label>
                   <span>Mã tour (tourCode)</span>
                   <small>Ưu tiên sử dụng khi tài liệu không rõ mã tour.</small>
@@ -802,6 +1026,7 @@ export const NewTourPage = () => {
                     value={generalOverridesForm.tourCode}
                     onChange={(event) => updateOverrideField("tourCode", event.target.value)}
                     placeholder="vd: SGN-DAD-2406"
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -810,6 +1035,7 @@ export const NewTourPage = () => {
                   <input
                     value={generalOverridesForm.customerName}
                     onChange={(event) => updateOverrideField("customerName", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -818,6 +1044,7 @@ export const NewTourPage = () => {
                   <input
                     value={generalOverridesForm.clientCompany}
                     onChange={(event) => updateOverrideField("clientCompany", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -826,6 +1053,7 @@ export const NewTourPage = () => {
                   <select
                     value={generalOverridesForm.nationality}
                     onChange={(event) => updateOverrideField("nationality", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   >
                     <option value="">Không đặt trước</option>
                     {masterData.catalogs.nationalities.map((nationality) => (
@@ -843,6 +1071,7 @@ export const NewTourPage = () => {
                     min={0}
                     value={generalOverridesForm.pax}
                     onChange={(event) => updateOverrideField("pax", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -853,6 +1082,7 @@ export const NewTourPage = () => {
                     onChange={(event) => updateOverrideField("guideName", event.target.value)}
                     list="guide-name-suggestions"
                     placeholder="vd: Cao Huu Tu"
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -861,6 +1091,7 @@ export const NewTourPage = () => {
                   <input
                     value={generalOverridesForm.driverName}
                     onChange={(event) => updateOverrideField("driverName", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -870,6 +1101,7 @@ export const NewTourPage = () => {
                     type="date"
                     value={generalOverridesForm.startDate}
                     onChange={(event) => updateOverrideField("startDate", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label>
@@ -879,6 +1111,7 @@ export const NewTourPage = () => {
                     type="date"
                     value={generalOverridesForm.endDate}
                     onChange={(event) => updateOverrideField("endDate", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
                 <label className="full-width">
@@ -888,6 +1121,7 @@ export const NewTourPage = () => {
                     rows={2}
                     value={generalOverridesForm.notes}
                     onChange={(event) => updateOverrideField("notes", event.target.value)}
+                    disabled={!selectedOverrideId || selectedOverrideId === ""}
                   />
                 </label>
               </div>
@@ -1439,6 +1673,21 @@ export const NewTourPage = () => {
         onClose={() => setShowPromptConfirmation(false)}
         onConfirm={executeExtraction}
         isProcessing={processing}
+      />
+      <ConfirmationDialog
+        isOpen={showDeleteOverrideDialog}
+        onClose={() => {
+          if (!isDeletingOverride) {
+            setShowDeleteOverrideDialog(false);
+          }
+        }}
+        onConfirm={confirmDeleteOverride}
+        title="Xóa gợi ý thông tin chung"
+        message="Bạn có chắc chắn muốn xóa gợi ý này? Thao tác không thể hoàn tác."
+        confirmText="Xóa"
+        cancelText="Hủy"
+        variant="danger"
+        isLoading={isDeletingOverride}
       />
     </div>
   );

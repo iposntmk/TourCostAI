@@ -340,6 +340,14 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
 }
 
+.primary-button.small,
+.ghost-button.small,
+.danger-button.small {
+  padding: 0.4rem 1rem;
+  min-height: 36px;
+  font-size: 0.85rem;
+}
+
 .primary-button {
   background: linear-gradient(120deg, var(--color-primary), var(--color-primary-light));
   color: #fff;
@@ -590,6 +598,35 @@
   flex-wrap: wrap;
 }
 
+.extraction-hints-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.extraction-hints-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 220px;
+}
+
+.extraction-hints-select select {
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 0.95rem;
+}
+
+.extraction-hints-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .extraction-hints-meta {
   display: flex;
   flex-direction: column;
@@ -614,6 +651,12 @@
   color: #94a3b8;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 .extraction-reference {
