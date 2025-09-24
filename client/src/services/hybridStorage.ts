@@ -6,7 +6,8 @@ import {
   serverTimestamp,
   Timestamp,
   type DocumentSnapshot,
-  type Unsubscribe
+  type Unsubscribe,
+  deleteDoc
 } from "firebase/firestore";
 import { db, COLLECTIONS, type SyncMetadata } from "../config/firebase";
 import type { MasterData } from "../types";
@@ -173,22 +174,7 @@ class HybridStorageService {
 
   // Public API
   async loadMasterData(): Promise<StorageResult<MasterData>> {
-    // Try to load from local storage first (fast)
-    const localData = this.loadFromLocalStorage();
-    
-    if (localData) {
-      // If online, try to sync in background
-      if (this.isOnline) {
-        this.syncInBackground();
-      }
-      
-      return {
-        data: localData,
-        fromCache: true,
-      };
-    }
-
-    // If no local data and online, try Firestore
+    // If online, always try to fetch from Firestore first
     if (this.isOnline) {
       try {
         const cloudData = await this.loadFromFirestore();
@@ -201,7 +187,17 @@ class HybridStorageService {
         }
       } catch (error) {
         console.warn("Failed to load from Firestore:", error);
+        // Fallback to local storage if Firestore fails
       }
+    }
+
+    // If offline or Firestore fails, try to load from local storage
+    const localData = this.loadFromLocalStorage();
+    if (localData) {
+      return {
+        data: localData,
+        fromCache: true,
+      };
     }
 
     return {
@@ -320,13 +316,13 @@ class HybridStorageService {
     // Clear local storage
     localStorage.removeItem(MASTER_DATA_STORAGE_KEY);
     localStorage.removeItem(SYNC_METADATA_KEY);
-    localStorage.removeItem("device-id");
+    // localStorage.removeItem("device-id");
 
     // Clear Firestore data if online
     if (this.isOnline) {
       try {
         const docRef = doc(db, COLLECTIONS.MASTER_DATA, this.deviceId);
-        await setDoc(docRef, {}, { merge: false }); // Overwrite with empty object
+        await deleteDoc(docRef); // Overwrite with empty object
       } catch (error) {
         console.warn("Failed to clear Firestore data:", error);
         throw error;

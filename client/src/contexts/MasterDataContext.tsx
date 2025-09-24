@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { defaultMasterData } from "../data/masterData";
+import { defaultMasterData, emptyMasterData } from "../data/masterData";
 import { hybridStorage, type SyncStatus } from "../services/hybridStorage";
 import { generateId } from "../utils/ids";
 import type {
@@ -39,6 +39,11 @@ export interface MasterDataContextValue {
   findGuideByName: (query: string) => Guide | undefined;
   forceSync: () => Promise<void>;
   clearAllData: () => Promise<void>;
+  updateMasterDataBatch: (data: Partial<MasterData>) => void;
+  addServicesBatch: (services: Omit<Service, "id">[]) => void;
+  addGuidesBatch: (guides: Omit<Guide, "id">[]) => void;
+  addPartnersBatch: (partners: Omit<Partner, "id">[]) => void;
+  addPerDiemRatesBatch: (rates: Omit<PerDiemRate, "id">[]) => void;
 }
 
 const MasterDataContext = createContext<MasterDataContextValue | undefined>(
@@ -63,7 +68,7 @@ const normalizeText = (value: string) =>
     .trim();
 
 export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
-  const [masterData, setMasterData] = useState<MasterData>(defaultMasterData);
+  const [masterData, setMasterData] = useState<MasterData>(emptyMasterData);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     isOnline: navigator.onLine,
     lastSync: null,
@@ -79,9 +84,12 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
         const result = await hybridStorage.loadMasterData();
         if (result.data) {
           setMasterData(result.data);
+        } else {
+          setMasterData(defaultMasterData);
         }
       } catch (error) {
         console.warn("Failed to load master data:", error);
+        setMasterData(defaultMasterData); // Fallback to default
       } finally {
         setIsLoading(false);
       }
@@ -285,12 +293,64 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const clearAllData = async () => {
     try {
       await hybridStorage.clearAllData();
-      // Reset to default data after clearing
-      setMasterData(defaultMasterData);
+      // Reset to empty data after clearing
+      setMasterData(emptyMasterData);
     } catch (error) {
       console.warn("Clear all data failed:", error);
       throw error;
     }
+  };
+
+  const updateMasterDataBatch = async (data: Partial<MasterData>) => {
+    const newData = await updateMasterData(masterData, (current) => ({
+      ...current,
+      ...data,
+    }));
+    setMasterData(newData);
+  };
+
+  const addServicesBatch = async (services: Omit<Service, "id">[]) => {
+    const newData = await updateMasterData(masterData, (current) => ({
+      ...current,
+      services: [
+        ...current.services,
+        ...services.map(service => ({ ...service, id: generateId() })),
+      ],
+    }));
+    setMasterData(newData);
+  };
+
+  const addGuidesBatch = async (guides: Omit<Guide, "id">[]) => {
+    const newData = await updateMasterData(masterData, (current) => ({
+      ...current,
+      guides: [
+        ...current.guides,
+        ...guides.map(guide => ({ ...guide, id: generateId() })),
+      ],
+    }));
+    setMasterData(newData);
+  };
+
+  const addPartnersBatch = async (partners: Omit<Partner, "id">[]) => {
+    const newData = await updateMasterData(masterData, (current) => ({
+      ...current,
+      partners: [
+        ...current.partners,
+        ...partners.map(partner => ({ ...partner, id: generateId() })),
+      ],
+    }));
+    setMasterData(newData);
+  };
+
+  const addPerDiemRatesBatch = async (rates: Omit<PerDiemRate, "id">[]) => {
+    const newData = await updateMasterData(masterData, (current) => ({
+      ...current,
+      perDiemRates: [
+        ...current.perDiemRates,
+        ...rates.map(rate => ({ ...rate, id: generateId() })),
+      ],
+    }));
+    setMasterData(newData);
   };
 
   const value: MasterDataContextValue = {
@@ -316,6 +376,11 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     findGuideByName,
     forceSync,
     clearAllData,
+    updateMasterDataBatch,
+    addServicesBatch,
+    addGuidesBatch,
+    addPartnersBatch,
+    addPerDiemRatesBatch,
   };
 
   return (

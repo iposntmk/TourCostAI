@@ -2,6 +2,17 @@ import type { MasterData } from "../types";
 
 export const MASTER_DATA_STORAGE_KEY = "tour-cost-ai/master-data";
 
+export const emptyMasterData: MasterData = {
+  services: [],
+  guides: [],
+  partners: [],
+  perDiemRates: [],
+  catalogs: {
+    nationalities: [],
+    serviceTypes: [],
+  },
+};
+
 export const defaultMasterData: MasterData = {
   services: [
     {
