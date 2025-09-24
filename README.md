@@ -1,3 +1,0 @@
-# TourCostAI
-# My Project
-# TourCostAI
