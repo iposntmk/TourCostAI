@@ -885,6 +885,50 @@
   line-height: 1.5;
 }
 
+.form-grid label.has-error span {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.form-grid label.has-error input,
+.form-grid label.has-error select,
+.form-grid label.has-error textarea {
+  border-color: rgba(220, 38, 38, 0.65);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.input-error {
+  border-color: rgba(220, 38, 38, 0.65) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+.amount-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.amount-suggestions button {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #0f172a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.amount-suggestions button:hover,
+.amount-suggestions button:focus-visible {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.45);
+  color: #1d4ed8;
+  outline: none;
+}
+
 .form-grid input:focus,
 .form-grid select:focus,
 .form-grid textarea:focus {
