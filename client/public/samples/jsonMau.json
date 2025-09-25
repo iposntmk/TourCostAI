@@ -1,0 +1,37 @@
+{
+  "thong_tin_chung": {
+    "ma_tour": "SGN-DAD-2501",
+    "ten_cong_ty": "Công ty ABC",
+    "ten_guide": "Nguyễn Văn A",
+    "ten_khach": "Trần B",
+    "quoc_tich_khach": "Việt Nam",
+    "so_luong_khach": 12,
+    "ten_lai_xe": "Lê Văn C",
+    "so_dien_thoai_lai_xe": "0909xxxxxx",
+    "so_dien_thoai_khach": "0988xxxxxx"
+  },
+  "danh_sach_ngay_tham_quan": [
+    {
+      "ngay_tham_quan": "01/10/2025",
+      "tinh": "Đà Nẵng"
+    }
+  ],
+  "danh_sach_dia_diem": [
+    { "dia_diem_tham_quan": "Ngũ Hành Sơn" },
+    { "dia_diem_tham_quan": "Bà Nà Hills" }
+  ],
+  "danh_sach_chi_phi": [
+    { "ten_chi_phi": "Vé tham quan", "so_tien_per_pax": 150000 },
+    { "ten_chi_phi": "Ăn trưa", "so_tien_per_pax": 120000 }
+  ],
+  "an": {
+    "an_trua": [
+      { "ten_mon": "Cơm gà", "so_tien_per_pax": 70000 },
+      { "ten_mon": "Canh chua", "so_tien_per_pax": 50000 }
+    ],
+    "an_toi": [
+      { "ten_mon": "Mì Quảng", "so_tien_per_pax": 80000 }
+    ]
+  },
+  "tip": { "co_tip": true, "so_tien_tip": 300000 }
+}

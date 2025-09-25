@@ -33,6 +33,7 @@ export const COLLECTIONS = {
   TOURS: "tours",
   SYNC_METADATA: "syncMetadata",
   GENERAL_OVERRIDES: "generalOverrides",
+  GEMINI_GENERAL_FIELDS: "geminiGeneralFields",
 } as const;
 
 // Sync metadata interface

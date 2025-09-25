@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertTriangle,
-  FiBookOpen,
   FiCheckCircle,
-  FiCopy,
   FiDownload,
   FiEdit,
   FiFilePlus,
   FiFileText,
   FiInfo,
-  FiPlusCircle,
   FiRefreshCw,
-  FiSliders,
-  FiTrash,
   FiUploadCloud,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
@@ -65,62 +60,6 @@ type GeneralOverridesFormState = {
   notes: string;
 };
 
-const extractionGeneralFieldDefinitions = [
-  {
-    key: "tourCode",
-    type: "string",
-    description: "Mã tour hoặc booking duy nhất cho đoàn khách.",
-  },
-  {
-    key: "customerName",
-    type: "string",
-    description: "Tên khách hàng chính hoặc trưởng đoàn.",
-  },
-  {
-    key: "clientCompany",
-    type: "string",
-    description: "Tên công ty/đơn vị đặt tour (tùy chọn).",
-    optional: true,
-  },
-  {
-    key: "nationality",
-    type: "string",
-    description: "Quốc tịch của đoàn khách theo danh mục chuẩn.",
-  },
-  {
-    key: "pax",
-    type: "number",
-    description: "Tổng số khách tham gia tour.",
-  },
-  {
-    key: "startDate",
-    type: "string (ISO)",
-    description: "Ngày bắt đầu tour theo định dạng ISO 8601.",
-  },
-  {
-    key: "endDate",
-    type: "string (ISO)",
-    description: "Ngày kết thúc tour theo định dạng ISO 8601.",
-  },
-  {
-    key: "guideName",
-    type: "string",
-    description: "Tên hướng dẫn viên xuất hiện trong tài liệu.",
-  },
-  {
-    key: "driverName",
-    type: "string",
-    description: "Tên tài xế hoặc đơn vị vận chuyển (tùy chọn).",
-    optional: true,
-  },
-  {
-    key: "notes",
-    type: "string",
-    description: "Ghi chú vận hành đặc biệt (tùy chọn).",
-    optional: true,
-  },
-] as const;
-
 const initialFinancialSummary: FinancialSummary = {
   advance: 0,
   collectionsForCompany: 0,
@@ -145,6 +84,7 @@ export const NewTourPage = () => {
 
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const customOutputFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const createInitialGeneral = () => ({
     code: "",
@@ -183,6 +123,8 @@ export const NewTourPage = () => {
   const [matches, setMatches] = useState<MatchedService[]>([]);
   const [showPromptManager, setShowPromptManager] = useState(false);
   const [showPromptConfirmation, setShowPromptConfirmation] = useState(false);
+  const [showRequestSample, setShowRequestSample] = useState(false);
+  const [showOutputSample, setShowOutputSample] = useState(false);
   const [otherExpenses, setOtherExpenses] = useState<Expense[]>([]);
   const [financials, setFinancials] = useState<FinancialSummary>(() => ({
     ...initialFinancialSummary,
@@ -199,6 +141,9 @@ export const NewTourPage = () => {
   const [selectedOverrideId, setSelectedOverrideId] = useState<string | null>(null);
   const [showDeleteOverrideDialog, setShowDeleteOverrideDialog] = useState(false);
   const [isDeletingOverride, setIsDeletingOverride] = useState(false);
+  const [useCustomOutput, setUseCustomOutput] = useState(false);
+  const [customOutputJsonText, setCustomOutputJsonText] = useState<string>("");
+  const [showCustomOutputPreview, setShowCustomOutputPreview] = useState(false);
 
   useEffect(() => {
     if (generalOverridePresets.length === 0) {
@@ -602,15 +547,20 @@ export const NewTourPage = () => {
 
         // Get latest prompt from Firebase
         const latestPrompt = await getLatestPrompt();
-        if (!latestPrompt) {
-          throw new Error("Không tìm thấy prompt nào. Vui lòng tạo prompt trước khi chạy trích xuất.");
+        // Determine which prompt to use
+        let promptToUse: string | undefined = latestPrompt?.content;
+        if (useCustomOutput) {
+          if (!parsedCustomOutput) {
+            throw new Error("JSON output tùy chỉnh không hợp lệ hoặc chưa được nạp.");
+          }
+          promptToUse = buildPromptWithCustomOutput(parsedCustomOutput);
         }
         
         extraction = await extractWithAI(
           file,
           masterData,
           apiKey,
-          latestPrompt.content,
+          promptToUse,
           overridesToUse,
         );
       } else {
@@ -870,6 +820,115 @@ export const NewTourPage = () => {
 
   const canConfirm = showVerification && !processing;
 
+  const jsonRequestSample = useMemo(() => {
+    const mimeType = imageInputRef.current?.files?.[0]?.type || "image/jpeg";
+    return {
+      contents: [
+        {
+          parts: [
+            { text: "<<PROMPT_TEXT_HERE>>" },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: "<<BASE64_IMAGE_DATA>>",
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        topK: 32,
+        topP: 1,
+        maxOutputTokens: 8192,
+      },
+    } as const;
+  }, [uploadSource]);
+
+  const jsonOutputSample = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return {
+      thong_tin_chung: {
+        ma_tour: "SGN-DAD-2409",
+        ten_cong_ty: "Công ty ABC",
+        ten_guide: "Nguyễn Văn A",
+        ten_khach: "Trần B",
+        quoc_tich_khach: "Việt Nam",
+        so_luong_khach: 12,
+        ten_lai_xe: "Lê Văn C",
+        so_dien_thoai_lai_xe: "0909xxxxxx",
+        so_dien_thoai_khach: "0988xxxxxx",
+      },
+      danh_sach_ngay_tham_quan: [
+        {
+          ngay_tham_quan: `01/10/${currentYear}`,
+          tinh: "Đà Nẵng",
+        },
+      ],
+      danh_sach_dia_diem: [
+        { dia_diem_tham_quan: "Ngũ Hành Sơn" },
+        { dia_diem_tham_quan: "Bà Nà Hills" },
+      ],
+      danh_sach_chi_phi: [
+        { ten_chi_phi: "Vé tham quan", so_tien_per_pax: 150000 },
+        { ten_chi_phi: "Ăn trưa", so_tien_per_pax: 120000 },
+      ],
+      an: {
+        an_trua: [
+          { ten_mon: "Cơm gà", so_tien_per_pax: 70000 },
+          { ten_mon: "Canh chua", so_tien_per_pax: 50000 },
+        ],
+        an_toi: [
+          { ten_mon: "Mì Quảng", so_tien_per_pax: 80000 },
+        ],
+      },
+      tip: { co_tip: true, so_tien_tip: 300000 },
+    } as const;
+  }, []);
+
+  const parsedCustomOutput = useMemo(() => {
+    try {
+      if (!customOutputJsonText.trim()) return null;
+      return JSON.parse(customOutputJsonText);
+    } catch {
+      return null;
+    }
+  }, [customOutputJsonText]);
+
+  const handleCustomOutputFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setCustomOutputJsonText(text);
+      setUseCustomOutput(true);
+      setShowCustomOutputPreview(true);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const buildPromptWithCustomOutput = (schemaObject: unknown): string => {
+    const servicesList = masterData.services.map((s) => `- ${s.name}: ${s.price.toLocaleString()} VND`).join("\n");
+    const guidesList = masterData.guides.map((g) => `- ${g.name}`).join("\n");
+    const nationalitiesList = masterData.catalogs.nationalities.join(", ");
+    const schemaJson = JSON.stringify(schemaObject, null, 2);
+    const currentYear = new Date().getFullYear();
+    return [
+      "Bạn là một hệ thống trích xuất dữ liệu chương trình tour từ hình ảnh (JPG/PNG/PDF) có tiếng Việt có dấu.",
+      "CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG CÓ GIẢI THÍCH HAY VĂN BẢN THÊM.",
+      "Phải bám sát đúng SCHEMA dưới đây: giữ nguyên key, cấu trúc, kiểu dữ liệu.",
+      "Nếu không có giá trị: number=0, string=\"\", array=[]. Ngày theo dd/mm/" + currentYear + ".",
+      "Hạn chế: KHÔNG thêm trường mới ngoài schema. KHÔNG đổi tên trường.",
+      "Danh sách tham chiếu:",
+      `- Dịch vụ chuẩn:\n${servicesList}`,
+      `- Hướng dẫn viên:\n${guidesList}`,
+      `- Quốc tịch: ${nationalitiesList}`,
+      "SCHEMA JSON CHÍNH XÁC (ví dụ mẫu, hãy điền dữ liệu trích xuất vào đúng trường):",
+      "```json\n" + schemaJson + "\n```",
+    ].join("\n\n");
+  };
+
   return (
     <div className="page-wrapper new-tour-page">
       <PageHeader
@@ -931,6 +990,7 @@ export const NewTourPage = () => {
               onUpdateSuggestions={(suggestions) => {
                 // Convert suggestions to form state
                 const newFormState: GeneralOverridesFormState = {
+                  name: generalOverridesForm.name || "",  // Keep existing name
                   tourCode: suggestions.tourCode || "",
                   customerName: suggestions.customerName || "",
                   clientCompany: suggestions.clientCompany || "",
@@ -943,223 +1003,32 @@ export const NewTourPage = () => {
                   notes: suggestions.notes || "",
                 };
                 setGeneralOverridesForm(newFormState);
+
+                // Persist to Firestore if a preset is selected
+                if (selectedOverrideId) {
+                  const updates: Partial<GeneralOverridePresetInput> = {};
+                  if (typeof suggestions.tourCode === "string") updates.tourCode = suggestions.tourCode.trim();
+                  if (typeof suggestions.customerName === "string") updates.customerName = suggestions.customerName.trim();
+                  if (typeof suggestions.clientCompany === "string") updates.clientCompany = suggestions.clientCompany.trim();
+                  if (typeof suggestions.nationality === "string") updates.nationality = suggestions.nationality.trim();
+                  if (typeof suggestions.pax === "number" && Number.isFinite(suggestions.pax)) {
+                    updates.pax = suggestions.pax;
+                  } else if (suggestions.pax === undefined) {
+                    updates.pax = null;
+                  }
+                  if (typeof suggestions.startDate === "string") updates.startDate = suggestions.startDate;
+                  if (typeof suggestions.endDate === "string") updates.endDate = suggestions.endDate;
+                  if (typeof suggestions.guideName === "string") updates.guideName = suggestions.guideName.trim();
+                  if (typeof suggestions.driverName === "string") updates.driverName = suggestions.driverName.trim();
+                  if (typeof suggestions.notes === "string") updates.notes = suggestions.notes.trim();
+
+                  void updateGeneralOverridePreset(selectedOverrideId, updates).catch(() => {
+                    // Non-blocking: ignore UI error, user can retry
+                  });
+                }
               }}
               masterData={masterData}
             />
-              <div className="extraction-hints-controls">
-                <label className="extraction-hints-select">
-                  <span>Tập gợi ý đang dùng</span>
-                  <select
-                    value={selectedOverrideId ?? ""}
-                    onChange={(event) => handleSelectOverride(event.target.value)}
-                    disabled={generalOverridesLoading}
-                  >
-                    <option value="">Không áp dụng gợi ý</option>
-                    {generalOverridePresets.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.name?.trim() || "Gợi ý không tên"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="extraction-hints-actions">
-                  <button
-                    type="button"
-                    className="ghost-button small"
-                    onClick={handleCreateOverridePreset}
-                    disabled={generalOverridesLoading}
-                  >
-                    <FiPlusCircle /> Tạo gợi ý
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-button small"
-                    onClick={handleDuplicateOverridePreset}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  >
-                    <FiCopy /> Nhân bản
-                  </button>
-                  <button
-                    type="button"
-                    className="danger-button small"
-                    onClick={handleRequestDeleteOverride}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  >
-                    <FiTrash /> Xóa
-                  </button>
-                </div>
-              </div>
-              <div className="extraction-hints-status">
-                <div className="extraction-hints-meta">
-                  <span className={`badge${hasGeneralOverrides ? "" : " neutral"}`}>
-                    {hasGeneralOverrides
-                      ? `${generalOverrideCount} trường gợi ý`
-                      : "Chưa có trường gợi ý"}
-                  </span>
-                  <small>
-                    {generalOverridesLoading
-                      ? "Đang tải gợi ý từ Firebase..."
-                      : "Đồng bộ realtime từ Firebase và áp dụng ở lần chạy Gemini tiếp theo."}
-                  </small>
-                  {generalOverridesError && (
-                    <small className="form-error">{generalOverridesError}</small>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="ghost-button small"
-                  onClick={resetGeneralOverrides}
-                  disabled={!selectedOverrideId || selectedOverrideId === "" || !hasGeneralOverrides}
-                >
-                  Xóa gợi ý
-                </button>
-              </div>
-              <datalist id="guide-name-suggestions">
-                {masterData.guides.map((guide) => (
-                  <option key={guide.id} value={guide.name} />
-                ))}
-              </datalist>
-              <div className="form-grid extraction-grid">
-                <label className="full-width">
-                  <span>Tên gợi ý</span>
-                  <small>Đặt tên để dễ nhận biết cấu hình gợi ý.</small>
-                  <input
-                    value={generalOverridesForm.name}
-                    onChange={(event) => updateOverrideField("name", event.target.value)}
-                    placeholder="vd: Đoàn khách công ty ABC"
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Mã tour (tourCode)</span>
-                  <small>Ưu tiên sử dụng khi tài liệu không rõ mã tour.</small>
-                  <input
-                    value={generalOverridesForm.tourCode}
-                    onChange={(event) => updateOverrideField("tourCode", event.target.value)}
-                    placeholder="vd: SGN-DAD-2406"
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Khách hàng (customerName)</span>
-                  <small>Tên khách hoặc trưởng đoàn.</small>
-                  <input
-                    value={generalOverridesForm.customerName}
-                    onChange={(event) => updateOverrideField("customerName", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Công ty khách hàng (clientCompany)</span>
-                  <small>Tên công ty/đơn vị đặt tour.</small>
-                  <input
-                    value={generalOverridesForm.clientCompany}
-                    onChange={(event) => updateOverrideField("clientCompany", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Quốc tịch (nationality)</span>
-                  <small>Chọn từ danh mục quốc tịch chuẩn.</small>
-                  <select
-                    value={generalOverridesForm.nationality}
-                    onChange={(event) => updateOverrideField("nationality", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  >
-                    <option value="">Không đặt trước</option>
-                    {masterData.catalogs.nationalities.map((nationality) => (
-                      <option key={nationality} value={nationality}>
-                        {nationality}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Số khách (pax)</span>
-                  <small>Nhập số lượng khách nếu đã biết.</small>
-                  <input
-                    type="number"
-                    min={0}
-                    value={generalOverridesForm.pax}
-                    onChange={(event) => updateOverrideField("pax", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Hướng dẫn viên (guideName)</span>
-                  <small>Tên hướng dẫn viên xuất hiện trên tài liệu.</small>
-                  <input
-                    value={generalOverridesForm.guideName}
-                    onChange={(event) => updateOverrideField("guideName", event.target.value)}
-                    list="guide-name-suggestions"
-                    placeholder="vd: Cao Huu Tu"
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Tài xế (driverName)</span>
-                  <small>Tên tài xế hoặc đơn vị vận chuyển.</small>
-                  <input
-                    value={generalOverridesForm.driverName}
-                    onChange={(event) => updateOverrideField("driverName", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Ngày bắt đầu (startDate)</span>
-                  <small>Ngày khởi hành dự kiến.</small>
-                  <input
-                    type="date"
-                    value={generalOverridesForm.startDate}
-                    onChange={(event) => updateOverrideField("startDate", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label>
-                  <span>Ngày kết thúc (endDate)</span>
-                  <small>Ngày kết thúc tour.</small>
-                  <input
-                    type="date"
-                    value={generalOverridesForm.endDate}
-                    onChange={(event) => updateOverrideField("endDate", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-                <label className="full-width">
-                  <span>Ghi chú (notes)</span>
-                  <small>Ghi chú đặc biệt, yêu cầu dịch vụ, lưu ý vận hành.</small>
-                  <textarea
-                    rows={2}
-                    value={generalOverridesForm.notes}
-                    onChange={(event) => updateOverrideField("notes", event.target.value)}
-                    disabled={!selectedOverrideId || selectedOverrideId === ""}
-                  />
-                </label>
-              </div>
-              <div className="extraction-reference">
-                <div className="extraction-reference-header">
-                  <div className="extraction-reference-title">
-                    <FiBookOpen /> Kiểu dữ liệu <code>ExtractionGeneralInfo</code>
-                  </div>
-                  <p>
-                    Đây là cấu trúc <code>general</code> trong <code>ExtractionResult</code> mà Gemini tạo
-                    ra sau khi chuẩn hóa.
-                  </p>
-                </div>
-                <div className="extraction-reference-grid">
-                  {extractionGeneralFieldDefinitions.map((field) => (
-                    <div key={field.key} className="extraction-reference-item">
-                      <div className="extraction-reference-item-header">
-                        <code>{field.key}</code>
-                        <span className="reference-type">{field.type}</span>
-                      </div>
-                      <p>{field.description}</p>
-                      {field.optional && <span className="badge neutral">Tùy chọn</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
             <div className="upload-actions sticky-actions">
               <button
                 className="primary-button"
@@ -1175,6 +1044,51 @@ export const NewTourPage = () => {
                 type="button"
               >
                 <FiEdit /> Quản lý Prompts
+              </button>
+              <button
+                className={`ghost-button${useCustomOutput ? " active" : ""}`}
+                type="button"
+                onClick={() => setUseCustomOutput((v) => !v)}
+                title="Bật/tắt dùng JSON output tùy chỉnh thay vì prompt chuẩn"
+              >
+                {useCustomOutput ? "Đang dùng JSON output tùy chỉnh" : "Dùng JSON output tùy chỉnh"}
+              </button>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => customOutputFileInputRef.current?.click()}
+                title="Nạp tệp JSON schema output tuỳ chỉnh"
+              >
+                <FiFileText /> Nhập JSON output tùy chỉnh
+              </button>
+              <input
+                ref={customOutputFileInputRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={handleCustomOutputFile}
+              />
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowCustomOutputPreview((v) => !v)}
+                disabled={!customOutputJsonText}
+              >
+                {showCustomOutputPreview ? "Ẩn JSON output tùy chỉnh" : "Xem JSON output tùy chỉnh"}
+              </button>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowRequestSample((v) => !v)}
+              >
+                {showRequestSample ? "Ẩn mẫu JSON request" : "Xem mẫu JSON request"}
+              </button>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowOutputSample((v) => !v)}
+              >
+                {showOutputSample ? "Ẩn mẫu JSON output" : "Xem mẫu JSON output"}
               </button>
               <button
                 className="ghost-button"
@@ -1206,6 +1120,33 @@ export const NewTourPage = () => {
             {processingMessage && (
               <div className="info-banner">
                 {processing ? <FiRefreshCw className="spin" /> : <FiCheckCircle />} {processingMessage}
+              </div>
+            )}
+            {showCustomOutputPreview && customOutputJsonText && (
+              <div className="json-result-section">
+                <JsonViewer
+                  data={parsedCustomOutput ?? { error: "JSON không hợp lệ" }}
+                  title="JSON output tùy chỉnh (schema)"
+                  defaultExpanded={false}
+                />
+              </div>
+            )}
+            {showRequestSample && (
+              <div className="json-result-section">
+                <JsonViewer
+                  data={jsonRequestSample}
+                  title="Mẫu JSON request gửi tới Gemini"
+                  defaultExpanded={false}
+                />
+              </div>
+            )}
+            {showOutputSample && (
+              <div className="json-result-section">
+                <JsonViewer
+                  data={jsonOutputSample}
+                  title="Mẫu JSON output mong đợi từ Gemini"
+                  defaultExpanded={false}
+                />
               </div>
             )}
             {corrections.length > 0 && !processing && (

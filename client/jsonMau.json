@@ -1,0 +1,89 @@
+{
+  "thong_tin_chung": {
+    "ma_tour": "VN-2025-001",
+    "ten_cong_ty": "Saigon Tourist",
+    "ten_guide": "Nguyễn Văn A",
+    "ten_khach": "John Smith, Maria Lopez, Tanaka Hiroshi",
+    "quoc_tich_khach": "Mỹ, Tây Ban Nha, Nhật Bản",
+    "so_luong_khach": 15,
+    "ten_lai_xe": "Trần Văn B",
+    "so_dien_thoai_khach": "+84901234567"
+  },
+  "ngay_bat_dau": "10/07/2025",
+  "ngay_ket_thuc": "15/07/2025",
+  "tong_so_ngay_tour": 6,
+  "danh_sach_ngay_tham_quan": [
+    { "ngay": "10/07/2025", "tinh_thanh": "Hà Nội" },
+    { "ngay": "11/07/2025", "tinh_thanh": "Ninh Bình" },
+    { "ngay": "12/07/2025", "tinh_thanh": "Hạ Long" },
+    { "ngay": "13/07/2025", "tinh_thanh": "Huế" },
+    { "ngay": "14/07/2025", "tinh_thanh": "Đà Nẵng" },
+    { "ngay": "15/07/2025", "tinh_thanh": "Hội An" }
+  ],
+  "danh_sach_dia_diem": [
+    { "ten_dia_diem": "Văn Miếu Quốc Tử Giám", "gia_ve": 30000, "ten_tinh": "Hà Nội" },
+    { "ten_dia_diem": "Tràng An", "gia_ve": 200000, "ten_tinh": "Ninh Bình" },
+    { "ten_dia_diem": "Vịnh Hạ Long", "gia_ve": 250000, "ten_tinh": "Quảng Ninh" },
+    { "ten_dia_diem": "Đại Nội", "gia_ve": 150000, "ten_tinh": "Thừa Thiên Huế" },
+    { "ten_dia_diem": "Ngũ Hành Sơn", "gia_ve": 40000, "ten_tinh": "Đà Nẵng" },
+    { "ten_dia_diem": "Phố Cổ Hội An", "gia_ve": 120000, "ten_tinh": "Quảng Nam" }
+  ],
+  "danh_sach_chi_phi": [
+    {
+      "ngay": "10/07/2025",
+      "loai": "Điểm tham quan",
+      "ten": "Văn Miếu Quốc Tử Giám",
+      "so_luong": 15,
+      "don_gia": 30000,
+      "thanh_tien": 450000
+    },
+    {
+      "ngay": "11/07/2025",
+      "loai": "Điểm tham quan",
+      "ten": "Tràng An",
+      "so_luong": 15,
+      "don_gia": 200000,
+      "thanh_tien": 3000000
+    },
+    {
+      "ngay": "12/07/2025",
+      "loai": "Ăn trưa",
+      "ten": "Nhà hàng Hạ Long View",
+      "so_luong": 15,
+      "don_gia": 120000,
+      "thanh_tien": 1800000
+    },
+    {
+      "ngay": "13/07/2025",
+      "loai": "Công tác phí",
+      "ten": "Guide allowance - Huế",
+      "so_luong": 1,
+      "don_gia": 500000,
+      "thanh_tien": 500000
+    }
+  ],
+  "an": {
+    "an_trua": [
+      { "ngay": "10/07/2025", "ten": "Nhà hàng Phố Cổ Hà Nội", "so_luong": 15, "don_gia": 100000, "thanh_tien": 1500000 },
+      { "ngay": "11/07/2025", "ten": "Nhà hàng Tràng An", "so_luong": 15, "don_gia": 120000, "thanh_tien": 1800000 }
+    ],
+    "an_toi": [
+      { "ngay": "12/07/2025", "ten": "Nhà hàng Hạ Long View", "so_luong": 15, "don_gia": 150000, "thanh_tien": 2250000 },
+      { "ngay": "13/07/2025", "ten": "Nhà hàng Cung Đình Huế", "so_luong": 15, "don_gia": 180000, "thanh_tien": 2700000 }
+    ]
+  },
+  "khach_san": [
+    { "ngay": "10/07/2025", "ten": "Khách sạn Melia Hà Nội", "dia_chi": "44B Lý Thường Kiệt, Hà Nội", "so_dien_thoai": "02439343343" },
+    { "ngay": "11/07/2025", "ten": "Khách sạn Ninh Bình Hidden Charm", "dia_chi": "Khu Tràng An, Ninh Bình", "so_dien_thoai": "02293888888" },
+    { "ngay": "12/07/2025", "ten": "Khách sạn Hạ Long Plaza", "dia_chi": "8 Hạ Long, Quảng Ninh", "so_dien_thoai": "02033821234" },
+    { "ngay": "13/07/2025", "ten": "Khách sạn Mường Thanh Huế", "dia_chi": "38 Lê Lợi, Huế", "so_dien_thoai": "02343822222" },
+    { "ngay": "14/07/2025", "ten": "Khách sạn Brilliant Đà Nẵng", "dia_chi": "162 Bạch Đằng, Đà Nẵng", "so_dien_thoai": "02363688888" },
+    { "ngay": "15/07/2025", "ten": "Khách sạn Silk Luxury Hội An", "dia_chi": "14 Hùng Vương, Hội An", "so_dien_thoai": "02353998888" }
+  ],
+  "tip": {
+    "co_tip": true,
+    "so_tien_tip": 2000000
+  },
+  "ghi_chu": "Đoàn có 2 khách ăn chay, lưu ý trong các bữa ăn."
+}
+

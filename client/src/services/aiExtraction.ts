@@ -59,49 +59,38 @@ export async function extractWithAI(
     // Prepare the prompt for Gemini
     const prompt = customPrompt || createExtractionPrompt(masterData);
     
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
+    // Build request body
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const body = {
+      contents: [
+        {
+          parts: [
+            { text: prompt },
             {
-              parts: [
-                {
-                  text: prompt,
-                },
-                {
-                  inline_data: {
-                    mime_type: file.type,
-                    data: base64Data,
-                  },
-                },
-              ],
+              inline_data: {
+                mime_type: file.type,
+                data: base64Data,
+              },
             },
           ],
-          generationConfig: {
-            temperature: 0.1,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 8192,
-          },
-        }),
-      }
-    );
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        topK: 32,
+        topP: 1,
+        maxOutputTokens: 8192,
+        // Enforce JSON-only response when custom schema/prompt is used
+        response_mime_type: "application/json",
+      },
+    } as const;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error?.message || 
-        `API request failed with status ${response.status}`
-      );
-    }
-
-    const data = await response.json();
+    // Call Gemini API with retry/backoff for temporary overload
+    const data = await fetchJsonWithRetry(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     const extractedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!extractedText) {
@@ -118,6 +107,54 @@ export async function extractWithAI(
     throw new Error(`Extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
+
+// Retry helper
+async function fetchJsonWithRetry(url: string, init: RequestInit, opts: { maxRetries?: number; initialDelayMs?: number } = {}) {
+  const maxRetries = opts.maxRetries ?? 4;
+  const initialDelayMs = opts.initialDelayMs ?? 600;
+  let attempt = 0;
+  while (true) {
+    try {
+      const res = await fetch(url, init);
+      if (!res.ok) {
+        const status = res.status;
+        let msg = `API request failed with status ${status}`;
+        let payload: any = undefined;
+        try { payload = await res.json(); msg = payload?.error?.message || msg; } catch {}
+        if (!shouldRetry(status, msg) || attempt >= maxRetries) {
+          throw new Error(toFriendlyError(msg, status));
+        }
+        // retry
+        await delay(Math.round(initialDelayMs * Math.pow(2, attempt) + jitter()));
+        attempt++; continue;
+      }
+      return await res.json();
+    } catch (e: any) {
+      const status = e?.status as number | undefined;
+      const msg = e?.message as string | undefined;
+      if (!shouldRetry(status, msg) || attempt >= maxRetries) {
+        throw new Error(toFriendlyError(msg, status));
+      }
+      await delay(Math.round(initialDelayMs * Math.pow(2, attempt) + jitter()));
+      attempt++;
+    }
+  }
+}
+
+function shouldRetry(status?: number, message?: string): boolean {
+  if (status === 429 || status === 503 || status === 502) return true;
+  if (!message) return false;
+  const s = message.toLowerCase();
+  return s.includes("overloaded") || s.includes("resource has been exhausted") || s.includes("quota") || s.includes("try again later") || s.includes("temporarily") || s.includes("unavailable");
+}
+
+function toFriendlyError(message?: string, status?: number): string {
+  if (shouldRetry(status, message)) return "Hệ thống Gemini đang quá tải. Vui lòng thử lại sau.";
+  return message || "Đã xảy ra lỗi khi gọi Gemini";
+}
+
+function delay(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+function jitter() { return Math.floor(Math.random() * 250); }
 
 /**
  * Convert file to base64 string

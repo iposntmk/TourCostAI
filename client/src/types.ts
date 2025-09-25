@@ -115,6 +115,8 @@ export interface ExtractionGeneralInfo {
   guideName: string;
   driverName: string;
   notes?: string;
+  // Allow additional dynamic fields
+  [key: string]: string | number | undefined;
 }
 
 export interface GeneralOverridePreset {
