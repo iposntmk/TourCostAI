@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiDatabase, FiDownload, FiEdit2, FiPlus, FiRefreshCw, FiSave, FiUsers, FiDollarSign, FiList, FiTrash2 } from "react-icons/fi";
 import { PageHeader } from "../../components/common/PageHeader";
 import { TabMenu } from "../../components/common/TabMenu";
@@ -52,6 +52,22 @@ const emptyPerDiemForm = (): PerDiemFormState => ({
   notes: "",
 });
 
+const amountFormatter = new Intl.NumberFormat("vi-VN", {
+  maximumFractionDigits: 0,
+});
+
+const formatAmountInputValue = (value: number) =>
+  value > 0 ? amountFormatter.format(value) : "";
+
+const parseAmountInputValue = (value: string) => {
+  const digitsOnly = value.replace(/\D/g, "");
+  return digitsOnly ? Number(digitsOnly) : 0;
+};
+
+const AMOUNT_SUGGESTIONS = [50000, 150000, 200000, 220000, 250000] as const;
+
+const formatAmountSuggestionLabel = (value: number) => `${Math.round(value / 1000)}k`;
+
 export const MasterDataPage = () => {
   const {
     masterData,
@@ -79,6 +95,39 @@ export const MasterDataPage = () => {
   const [guideForm, setGuideForm] = useState<GuideFormState>(emptyGuideForm);
   const [perDiemForm, setPerDiemForm] = useState<PerDiemFormState>(emptyPerDiemForm);
 
+  const serviceNameInputRef = useRef<HTMLInputElement>(null);
+  const servicePriceInputRef = useRef<HTMLInputElement>(null);
+  const guideNameInputRef = useRef<HTMLInputElement>(null);
+  const perDiemLocationInputRef = useRef<HTMLInputElement>(null);
+  const perDiemRateInputRef = useRef<HTMLInputElement>(null);
+
+  const editingServiceNameRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const editingServicePriceRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const editingGuideNameRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const editingPerDiemLocationRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const editingPerDiemRateRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const [serviceFormErrors, setServiceFormErrors] = useState<{ name: boolean; price: boolean }>({
+    name: false,
+    price: false,
+  });
+  const [guideFormNameError, setGuideFormNameError] = useState(false);
+  const [perDiemFormErrors, setPerDiemFormErrors] = useState<{
+    location: boolean;
+    rate: boolean;
+  }>({
+    location: false,
+    rate: false,
+  });
+
+  const [editingServiceNameErrorId, setEditingServiceNameErrorId] = useState<string | null>(null);
+  const [editingServicePriceErrorId, setEditingServicePriceErrorId] = useState<string | null>(null);
+  const [editingGuideNameErrorId, setEditingGuideNameErrorId] = useState<string | null>(null);
+  const [editingPerDiemError, setEditingPerDiemError] = useState<{
+    id: string;
+    field: "location" | "rate";
+  } | null>(null);
+
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingGuide, setEditingGuide] = useState<Guide | null>(null);
   const [editingPerDiem, setEditingPerDiem] = useState<PerDiemRate | null>(null);
@@ -88,6 +137,39 @@ export const MasterDataPage = () => {
   const [activeTab, setActiveTab] = useState("services");
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+
+  const focusInput = (input: HTMLInputElement | null) => {
+    if (!input) return;
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange?.(input.value.length, input.value.length);
+    }, 0);
+  };
+
+  const resetServiceFormErrors = () =>
+    setServiceFormErrors({
+      name: false,
+      price: false,
+    });
+
+  const resetPerDiemFormErrors = () =>
+    setPerDiemFormErrors({
+      location: false,
+      rate: false,
+    });
+
+  const clearServiceEditingErrors = () => {
+    setEditingServiceNameErrorId(null);
+    setEditingServicePriceErrorId(null);
+  };
+
+  const clearGuideEditingErrors = () => {
+    setEditingGuideNameErrorId(null);
+  };
+
+  const clearPerDiemEditingErrors = () => {
+    setEditingPerDiemError(null);
+  };
 
   useEffect(() => {
     setServiceForm((current) => {
@@ -139,6 +221,20 @@ export const MasterDataPage = () => {
     );
   };
 
+  const renderAmountSuggestions = (onSelect: (amount: number) => void) => (
+    <div className="amount-suggestions">
+      {AMOUNT_SUGGESTIONS.map((amount) => (
+        <button
+          key={amount}
+          type="button"
+          onClick={() => onSelect(amount)}
+        >
+          {formatAmountSuggestionLabel(amount)}
+        </button>
+      ))}
+    </div>
+  );
+
   const tabs = [
     { id: "services", label: "Dịch vụ & bảng giá", icon: <FiDatabase /> },
     { id: "guides", label: "Hướng dẫn viên", icon: <FiUsers /> },
@@ -147,41 +243,84 @@ export const MasterDataPage = () => {
   ];
 
   const handleAddService = () => {
-    if (
-      !serviceForm.name.trim() ||
-      !serviceForm.category ||
-      serviceForm.price <= 0 ||
-      !serviceForm.unit.trim()
-    ) {
+    const trimmedName = serviceForm.name.trim();
+    const trimmedUnit = serviceForm.unit.trim();
+
+    if (!trimmedName) {
+      setServiceFormErrors((current) => ({ ...current, name: true }));
+      focusInput(serviceNameInputRef.current);
       return;
     }
+
+    if (!serviceForm.category) {
+      return;
+    }
+
+    if (serviceForm.price <= 0) {
+      setServiceFormErrors((current) => ({ ...current, price: true }));
+      focusInput(servicePriceInputRef.current);
+      return;
+    }
+
+    if (!trimmedUnit) {
+      return;
+    }
+
     addService({
-      name: serviceForm.name.trim(),
+      name: trimmedName,
       category: serviceForm.category,
       price: serviceForm.price,
-      unit: serviceForm.unit.trim(),
+      unit: trimmedUnit,
       description: serviceForm.description || undefined,
     });
     setServiceForm(emptyServiceForm(serviceTypes[0] ?? ""));
+    resetServiceFormErrors();
+    focusInput(serviceNameInputRef.current);
   };
 
   const handleSaveService = () => {
     if (!editingService) return;
-    if (!editingService.name.trim() || !editingService.category || editingService.price <= 0) return;
+
+    const trimmedName = editingService.name.trim();
+
+    if (!trimmedName) {
+      setEditingServiceNameErrorId(editingService.id);
+      focusInput(editingServiceNameRefs.current[editingService.id] ?? null);
+      return;
+    }
+
+    if (!editingService.category) {
+      return;
+    }
+
+    if (editingService.price <= 0) {
+      setEditingServicePriceErrorId(editingService.id);
+      focusInput(editingServicePriceRefs.current[editingService.id] ?? null);
+      return;
+    }
+
     updateService(editingService.id, {
-      name: editingService.name.trim(),
+      name: trimmedName,
       category: editingService.category,
       price: editingService.price,
       unit: editingService.unit,
       description: editingService.description,
     });
     setEditingService(null);
+    clearServiceEditingErrors();
   };
 
   const handleAddGuide = () => {
-    if (!guideForm.name.trim()) return;
+    const trimmedName = guideForm.name.trim();
+
+    if (!trimmedName) {
+      setGuideFormNameError(true);
+      focusInput(guideNameInputRef.current);
+      return;
+    }
+
     addGuide({
-      name: guideForm.name.trim(),
+      name: trimmedName,
       phone: guideForm.phone || undefined,
       email: guideForm.email || undefined,
       languages: guideForm.languages
@@ -190,41 +329,82 @@ export const MasterDataPage = () => {
         .filter(Boolean),
     });
     setGuideForm(emptyGuideForm());
+    setGuideFormNameError(false);
+    focusInput(guideNameInputRef.current);
   };
 
   const handleSaveGuide = () => {
     if (!editingGuide) return;
-    if (!editingGuide.name.trim()) return;
+
+    const trimmedName = editingGuide.name.trim();
+
+    if (!trimmedName) {
+      setEditingGuideNameErrorId(editingGuide.id);
+      focusInput(editingGuideNameRefs.current[editingGuide.id] ?? null);
+      return;
+    }
+
     updateGuide(editingGuide.id, {
-      name: editingGuide.name.trim(),
+      name: trimmedName,
       phone: editingGuide.phone,
       email: editingGuide.email,
       languages: editingGuide.languages,
     });
     setEditingGuide(null);
+    clearGuideEditingErrors();
   };
 
   const handleAddPerDiem = () => {
-    if (!perDiemForm.location.trim() || perDiemForm.rate <= 0) return;
+    const trimmedLocation = perDiemForm.location.trim();
+
+    if (!trimmedLocation) {
+      setPerDiemFormErrors((current) => ({ ...current, location: true }));
+      focusInput(perDiemLocationInputRef.current);
+      return;
+    }
+
+    if (perDiemForm.rate <= 0) {
+      setPerDiemFormErrors((current) => ({ ...current, rate: true }));
+      focusInput(perDiemRateInputRef.current);
+      return;
+    }
+
     addPerDiemRate({
-      location: perDiemForm.location.trim(),
+      location: trimmedLocation,
       rate: perDiemForm.rate,
       currency: perDiemForm.currency,
       notes: perDiemForm.notes || undefined,
     });
     setPerDiemForm(emptyPerDiemForm());
+    resetPerDiemFormErrors();
+    focusInput(perDiemLocationInputRef.current);
   };
 
   const handleSavePerDiem = () => {
     if (!editingPerDiem) return;
-    if (!editingPerDiem.location.trim()) return;
+
+    const trimmedLocation = editingPerDiem.location.trim();
+
+    if (!trimmedLocation) {
+      setEditingPerDiemError({ id: editingPerDiem.id, field: "location" });
+      focusInput(editingPerDiemLocationRefs.current[editingPerDiem.id] ?? null);
+      return;
+    }
+
+    if (editingPerDiem.rate <= 0) {
+      setEditingPerDiemError({ id: editingPerDiem.id, field: "rate" });
+      focusInput(editingPerDiemRateRefs.current[editingPerDiem.id] ?? null);
+      return;
+    }
+
     updatePerDiemRate(editingPerDiem.id, {
-      location: editingPerDiem.location.trim(),
+      location: trimmedLocation,
       rate: editingPerDiem.rate,
       currency: editingPerDiem.currency,
       notes: editingPerDiem.notes,
     });
     setEditingPerDiem(null);
+    clearPerDiemEditingErrors();
   };
 
   const addSharedNationality = () => {
@@ -395,12 +575,22 @@ export const MasterDataPage = () => {
                   <td>
                     {editingService?.id === service.id ? (
                       <input
-                        value={editingService.name}
-                        onChange={(event) =>
-                          setEditingService((current) =>
-                            current ? { ...current, name: event.target.value } : current,
-                          )
+                        ref={(element) => {
+                          editingServiceNameRefs.current[service.id] = element;
+                        }}
+                        className={
+                          editingServiceNameErrorId === service.id ? "input-error" : undefined
                         }
+                        value={editingService.name}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setEditingService((current) =>
+                            current ? { ...current, name: nextValue } : current,
+                          );
+                          if (editingServiceNameErrorId === service.id && nextValue.trim()) {
+                            setEditingServiceNameErrorId(null);
+                          }
+                        }}
                       />
                     ) : (
                       service.name
@@ -420,16 +610,24 @@ export const MasterDataPage = () => {
                   <td>
                     {editingService?.id === service.id ? (
                       <input
-                        type="number"
-                        min={0}
-                        value={editingService.price}
-                        onChange={(event) =>
-                          setEditingService((current) =>
-                            current
-                              ? { ...current, price: Math.max(0, Number(event.target.value)) }
-                              : current,
-                          )
+                        ref={(element) => {
+                          editingServicePriceRefs.current[service.id] = element;
+                        }}
+                        className={
+                          editingServicePriceErrorId === service.id ? "input-error" : undefined
                         }
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={formatAmountInputValue(editingService.price)}
+                        onChange={(event) => {
+                          const nextValue = parseAmountInputValue(event.target.value);
+                          setEditingService((current) =>
+                            current ? { ...current, price: nextValue } : current,
+                          );
+                          if (editingServicePriceErrorId === service.id && nextValue > 0) {
+                            setEditingServicePriceErrorId(null);
+                          }
+                        }}
                       />
                     ) : (
                       formatCurrency(service.price)
@@ -455,7 +653,13 @@ export const MasterDataPage = () => {
                         <button className="primary-button" onClick={handleSaveService}>
                           <FiSave /> Lưu
                         </button>
-                        <button className="ghost-button" onClick={() => setEditingService(null)}>
+                        <button
+                          className="ghost-button"
+                          onClick={() => {
+                            setEditingService(null);
+                            clearServiceEditingErrors();
+                          }}
+                        >
                           Hủy
                         </button>
                       </>
@@ -463,7 +667,10 @@ export const MasterDataPage = () => {
                       <>
                         <button
                           className="ghost-button"
-                          onClick={() => setEditingService(service)}
+                          onClick={() => {
+                            clearServiceEditingErrors();
+                            setEditingService({ ...service });
+                          }}
                         >
                           <FiEdit2 /> Chỉnh sửa
                         </button>
@@ -482,13 +689,18 @@ export const MasterDataPage = () => {
           </table>
         </div>
         <div className="form-grid">
-          <label>
+          <label className={serviceFormErrors.name ? "has-error" : undefined}>
             <span>Tên dịch vụ</span>
             <input
+              ref={serviceNameInputRef}
               value={serviceForm.name}
-              onChange={(event) =>
-                setServiceForm((current) => ({ ...current, name: event.target.value }))
-              }
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setServiceForm((current) => ({ ...current, name: nextValue }));
+                if (serviceFormErrors.name && nextValue.trim()) {
+                  setServiceFormErrors((current) => ({ ...current, name: false }));
+                }
+              }}
             />
           </label>
           <label>
@@ -506,19 +718,32 @@ export const MasterDataPage = () => {
               }
             />
           </label>
-          <label>
+          <label className={serviceFormErrors.price ? "has-error" : undefined}>
             <span>Giá</span>
             <input
-              type="number"
-              min={0}
-              value={serviceForm.price}
-              onChange={(event) =>
+              ref={servicePriceInputRef}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={formatAmountInputValue(serviceForm.price)}
+              onChange={(event) => {
+                const nextValue = parseAmountInputValue(event.target.value);
                 setServiceForm((current) => ({
                   ...current,
-                  price: Math.max(0, Number(event.target.value)),
-                }))
-              }
+                  price: nextValue,
+                }));
+                if (serviceFormErrors.price && nextValue > 0) {
+                  setServiceFormErrors((current) => ({ ...current, price: false }));
+                }
+              }}
             />
+            {renderAmountSuggestions((amount) => {
+              setServiceForm((current) => ({
+                ...current,
+                price: amount,
+              }));
+              setServiceFormErrors((current) => ({ ...current, price: false }));
+              focusInput(servicePriceInputRef.current);
+            })}
           </label>
           <label className="full-width">
             <span>Mô tả</span>
@@ -577,12 +802,22 @@ export const MasterDataPage = () => {
                   <td>
                     {editingGuide?.id === guide.id ? (
                       <input
-                        value={editingGuide.name}
-                        onChange={(event) =>
-                          setEditingGuide((current) =>
-                            current ? { ...current, name: event.target.value } : current,
-                          )
+                        ref={(element) => {
+                          editingGuideNameRefs.current[guide.id] = element;
+                        }}
+                        className={
+                          editingGuideNameErrorId === guide.id ? "input-error" : undefined
                         }
+                        value={editingGuide.name}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setEditingGuide((current) =>
+                            current ? { ...current, name: nextValue } : current,
+                          );
+                          if (editingGuideNameErrorId === guide.id && nextValue.trim()) {
+                            setEditingGuideNameErrorId(null);
+                          }
+                        }}
                       />
                     ) : (
                       guide.name
@@ -644,7 +879,13 @@ export const MasterDataPage = () => {
                         <button className="primary-button" onClick={handleSaveGuide}>
                           <FiSave /> Lưu
                         </button>
-                        <button className="ghost-button" onClick={() => setEditingGuide(null)}>
+                        <button
+                          className="ghost-button"
+                          onClick={() => {
+                            setEditingGuide(null);
+                            clearGuideEditingErrors();
+                          }}
+                        >
                           Hủy
                         </button>
                       </>
@@ -652,7 +893,10 @@ export const MasterDataPage = () => {
                       <>
                         <button
                           className="ghost-button"
-                          onClick={() => setEditingGuide(guide)}
+                          onClick={() => {
+                            clearGuideEditingErrors();
+                            setEditingGuide({ ...guide });
+                          }}
                         >
                           <FiEdit2 /> Chỉnh sửa
                         </button>
@@ -671,13 +915,18 @@ export const MasterDataPage = () => {
           </table>
         </div>
         <div className="form-grid">
-          <label>
+          <label className={guideFormNameError ? "has-error" : undefined}>
             <span>Tên</span>
             <input
+              ref={guideNameInputRef}
               value={guideForm.name}
-              onChange={(event) =>
-                setGuideForm((current) => ({ ...current, name: event.target.value }))
-              }
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setGuideForm((current) => ({ ...current, name: nextValue }));
+                if (guideFormNameError && nextValue.trim()) {
+                  setGuideFormNameError(false);
+                }
+              }}
             />
           </label>
           <label>
@@ -753,12 +1002,29 @@ export const MasterDataPage = () => {
                   <td>
                     {editingPerDiem?.id === rate.id ? (
                       <input
-                        value={editingPerDiem.location}
-                        onChange={(event) =>
-                          setEditingPerDiem((current) =>
-                            current ? { ...current, location: event.target.value } : current,
-                          )
+                        ref={(element) => {
+                          editingPerDiemLocationRefs.current[rate.id] = element;
+                        }}
+                        className={
+                          editingPerDiemError?.id === rate.id &&
+                          editingPerDiemError.field === "location"
+                            ? "input-error"
+                            : undefined
                         }
+                        value={editingPerDiem.location}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setEditingPerDiem((current) =>
+                            current ? { ...current, location: nextValue } : current,
+                          );
+                          if (
+                            editingPerDiemError?.id === rate.id &&
+                            editingPerDiemError.field === "location" &&
+                            nextValue.trim()
+                          ) {
+                            setEditingPerDiemError(null);
+                          }
+                        }}
                       />
                     ) : (
                       rate.location
@@ -767,16 +1033,31 @@ export const MasterDataPage = () => {
                   <td>
                     {editingPerDiem?.id === rate.id ? (
                       <input
-                        type="number"
-                        min={0}
-                        value={editingPerDiem.rate}
-                        onChange={(event) =>
-                          setEditingPerDiem((current) =>
-                            current
-                              ? { ...current, rate: Math.max(0, Number(event.target.value)) }
-                              : current,
-                          )
+                        ref={(element) => {
+                          editingPerDiemRateRefs.current[rate.id] = element;
+                        }}
+                        className={
+                          editingPerDiemError?.id === rate.id &&
+                          editingPerDiemError.field === "rate"
+                            ? "input-error"
+                            : undefined
                         }
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={formatAmountInputValue(editingPerDiem.rate)}
+                        onChange={(event) => {
+                          const nextValue = parseAmountInputValue(event.target.value);
+                          setEditingPerDiem((current) =>
+                            current ? { ...current, rate: nextValue } : current,
+                          );
+                          if (
+                            editingPerDiemError?.id === rate.id &&
+                            editingPerDiemError.field === "rate" &&
+                            nextValue > 0
+                          ) {
+                            setEditingPerDiemError(null);
+                          }
+                        }}
                       />
                     ) : (
                       formatCurrency(rate.rate, rate.currency)
@@ -816,7 +1097,13 @@ export const MasterDataPage = () => {
                         <button className="primary-button" onClick={handleSavePerDiem}>
                           <FiSave /> Lưu
                         </button>
-                        <button className="ghost-button" onClick={() => setEditingPerDiem(null)}>
+                        <button
+                          className="ghost-button"
+                          onClick={() => {
+                            setEditingPerDiem(null);
+                            clearPerDiemEditingErrors();
+                          }}
+                        >
                           Hủy
                         </button>
                       </>
@@ -824,7 +1111,10 @@ export const MasterDataPage = () => {
                       <>
                         <button
                           className="ghost-button"
-                          onClick={() => setEditingPerDiem(rate)}
+                          onClick={() => {
+                            clearPerDiemEditingErrors();
+                            setEditingPerDiem({ ...rate });
+                          }}
                         >
                           <FiEdit2 /> Chỉnh sửa
                         </button>
@@ -843,28 +1133,46 @@ export const MasterDataPage = () => {
           </table>
         </div>
         <div className="form-grid">
-          <label>
+          <label className={perDiemFormErrors.location ? "has-error" : undefined}>
             <span>Địa điểm</span>
             <input
+              ref={perDiemLocationInputRef}
               value={perDiemForm.location}
-              onChange={(event) =>
-                setPerDiemForm((current) => ({ ...current, location: event.target.value }))
-              }
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setPerDiemForm((current) => ({ ...current, location: nextValue }));
+                if (perDiemFormErrors.location && nextValue.trim()) {
+                  setPerDiemFormErrors((current) => ({ ...current, location: false }));
+                }
+              }}
             />
           </label>
-          <label>
+          <label className={perDiemFormErrors.rate ? "has-error" : undefined}>
             <span>Mức phụ cấp</span>
             <input
-              type="number"
-              min={0}
-              value={perDiemForm.rate}
-              onChange={(event) =>
+              ref={perDiemRateInputRef}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={formatAmountInputValue(perDiemForm.rate)}
+              onChange={(event) => {
+                const nextValue = parseAmountInputValue(event.target.value);
                 setPerDiemForm((current) => ({
                   ...current,
-                  rate: Math.max(0, Number(event.target.value)),
-                }))
-              }
+                  rate: nextValue,
+                }));
+                if (perDiemFormErrors.rate && nextValue > 0) {
+                  setPerDiemFormErrors((current) => ({ ...current, rate: false }));
+                }
+              }}
             />
+            {renderAmountSuggestions((amount) => {
+              setPerDiemForm((current) => ({
+                ...current,
+                rate: amount,
+              }));
+              setPerDiemFormErrors((current) => ({ ...current, rate: false }));
+              focusInput(perDiemRateInputRef.current);
+            })}
           </label>
           <label>
             <span>Tiền tệ</span>
