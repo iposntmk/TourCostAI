@@ -5,9 +5,10 @@ import { saveApiKey, loadApiKey, saveApiMode, loadApiMode } from "../../services
 interface ApiKeySettingsProps {
   onApiKeyChange?: (key: string) => void;
   onApiModeChange?: (mode: "mock" | "live") => void;
+  resetSignal?: number;
 }
 
-export const ApiKeySettings = ({ onApiKeyChange, onApiModeChange }: ApiKeySettingsProps) => {
+export const ApiKeySettings = ({ onApiKeyChange, onApiModeChange, resetSignal }: ApiKeySettingsProps) => {
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiMode, setApiMode] = useState<"mock" | "live">("mock");
@@ -22,6 +23,19 @@ export const ApiKeySettings = ({ onApiKeyChange, onApiModeChange }: ApiKeySettin
     setApiKey(savedKey);
     setApiMode(savedMode);
   }, []);
+
+  useEffect(() => {
+    if (resetSignal === undefined) {
+      return;
+    }
+
+    const savedKey = loadApiKey();
+    const savedMode = loadApiMode();
+    setApiKey(savedKey);
+    setApiMode(savedMode);
+    setValidationStatus("idle");
+    setValidationMessage("");
+  }, [resetSignal]);
 
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
@@ -69,12 +83,6 @@ export const ApiKeySettings = ({ onApiKeyChange, onApiModeChange }: ApiKeySettin
     } finally {
       setIsValidating(false);
     }
-  };
-
-  const getApiKeyDisplay = () => {
-    if (!apiKey) return "";
-    if (showApiKey) return apiKey;
-    return "•".repeat(Math.min(apiKey.length, 20));
   };
 
   const getValidationIcon = () => {
