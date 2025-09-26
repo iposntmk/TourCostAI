@@ -2,17 +2,20 @@ import { useState } from "react";
 import { FiSettings, FiSave, FiRefreshCw } from "react-icons/fi";
 import { PageHeader } from "../../components/common/PageHeader";
 import { ApiKeySettings } from "../../components/common/ApiKeySettings";
-import { saveApiKey, loadApiKey, saveApiMode, loadApiMode } from "../../services/aiExtraction";
+import { loadApiKey, loadApiMode } from "../../services/aiExtraction";
 
 export const SettingsPage = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [resetSignal, setResetSignal] = useState(0);
 
   const handleApiKeyChange = (key: string) => {
+    void key;
     setHasChanges(true);
   };
 
   const handleApiModeChange = (mode: "mock" | "live") => {
+    void mode;
     setHasChanges(true);
   };
 
@@ -30,8 +33,7 @@ export const SettingsPage = () => {
   };
 
   const handleReset = () => {
-    const savedKey = loadApiKey();
-    const savedMode = loadApiMode();
+    setResetSignal((value) => value + 1);
     setHasChanges(false);
   };
 
@@ -53,9 +55,10 @@ export const SettingsPage = () => {
             </p>
           </div>
           <div className="panel-body">
-            <ApiKeySettings 
+            <ApiKeySettings
               onApiKeyChange={handleApiKeyChange}
               onApiModeChange={handleApiModeChange}
+              resetSignal={resetSignal}
             />
             
             <div className="settings-actions">

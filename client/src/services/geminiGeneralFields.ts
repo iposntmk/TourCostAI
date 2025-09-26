@@ -69,16 +69,16 @@ export const listFields = async (): Promise<GeminiGeneralField[]> => {
   return snapshot.docs.map(parseField);
 };
 
-function scrubUndefined<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+function scrubUndefined<T extends object>(obj: T): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  Object.entries(obj).forEach(([k, v]) => {
+  Object.entries(obj as Record<string, unknown>).forEach(([k, v]) => {
     if (v === undefined) return; // Firestore disallows undefined
     out[k] = v;
   });
   return out;
 }
 
-function buildCreatePayload(input: GeminiGeneralFieldInput) {
+function buildCreatePayload(input: Partial<GeminiGeneralFieldInput>) {
   const base = scrubUndefined(input);
   // Only keep options for select and if it's a real array
   if (base.type !== "select") {
@@ -100,7 +100,7 @@ export const createField = async (input: GeminiGeneralFieldInput): Promise<strin
 };
 
 export const updateField = async (id: string, updates: Partial<GeminiGeneralFieldInput>): Promise<void> => {
-  const clean = buildCreatePayload(updates as GeminiGeneralFieldInput);
+  const clean = buildCreatePayload(updates);
   const payload: Record<string, unknown> = { ...clean, updatedAt: serverTimestamp() };
   await setDoc(doc(collectionRef, id), payload, { merge: true });
 };

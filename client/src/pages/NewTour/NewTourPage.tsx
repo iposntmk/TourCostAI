@@ -13,7 +13,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { JsonViewer } from "../../components/common/JsonViewer";
-import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { PromptManager } from "../../components/common/PromptManager";
 import { PromptConfirmationModal } from "../../components/common/PromptConfirmationModal";
 import { GeminiSuggestionsGrid } from "../../components/common/GeminiSuggestionsGrid";
@@ -76,10 +75,7 @@ export const NewTourPage = () => {
     presets: generalOverridePresets,
     isLoading: generalOverridesLoading,
     error: generalOverridesError,
-    createPreset: createGeneralOverridePreset,
     updatePreset: updateGeneralOverridePreset,
-    deletePreset: deleteGeneralOverridePreset,
-    duplicatePreset: duplicateGeneralOverridePreset,
   } = useGeneralOverrides();
 
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
@@ -139,8 +135,6 @@ export const NewTourPage = () => {
     createInitialGeneralOverrides,
   );
   const [selectedOverrideId, setSelectedOverrideId] = useState<string | null>(null);
-  const [showDeleteOverrideDialog, setShowDeleteOverrideDialog] = useState(false);
-  const [isDeletingOverride, setIsDeletingOverride] = useState(false);
   const [useCustomOutput, setUseCustomOutput] = useState(false);
   const [customOutputJsonText, setCustomOutputJsonText] = useState<string>("");
   const [showCustomOutputPreview, setShowCustomOutputPreview] = useState(false);
@@ -240,112 +234,6 @@ export const NewTourPage = () => {
     () => Object.keys(generalOverrides).length,
     [generalOverrides],
   );
-  const hasGeneralOverrides = generalOverrideCount > 0;
-
-  const updateOverrideField = <K extends keyof GeneralOverridesFormState>(
-    field: K,
-    value: GeneralOverridesFormState[K],
-  ) => {
-    setGeneralOverridesForm((current) => ({ ...current, [field]: value }));
-    if (!selectedOverrideId) {
-      return;
-    }
-
-    const updates: Partial<GeneralOverridePresetInput> = {};
-
-    if (field === "pax") {
-      const parsed = value === "" ? null : Number(value);
-      updates.pax = parsed === null || Number.isFinite(parsed) ? (parsed as number | null) : null;
-    } else if (field === "startDate" || field === "endDate") {
-      if (typeof value === "string" && value) {
-        const iso = fromInputDateValue(value);
-        (updates as Record<string, string>)[field] = iso || value;
-      } else {
-        (updates as Record<string, string>)[field] = "";
-      }
-    } else if (field === "name") {
-      updates.name = typeof value === "string" ? value.trim() : "";
-    } else {
-      updates[field] = typeof value === "string" ? value.trim() : "";
-    }
-
-    void updateGeneralOverridePreset(selectedOverrideId, updates);
-  };
-
-  const resetGeneralOverrides = () => {
-    setGeneralOverridesForm(createInitialGeneralOverrides());
-    if (!selectedOverrideId) {
-      return;
-    }
-
-    void updateGeneralOverridePreset(selectedOverrideId, {
-      tourCode: "",
-      customerName: "",
-      clientCompany: "",
-      nationality: "",
-      pax: null,
-      startDate: "",
-      endDate: "",
-      guideName: "",
-      driverName: "",
-      notes: "",
-    });
-  };
-
-  const handleSelectOverride = (id: string) => {
-    if (!id) {
-      setSelectedOverrideId("");
-      return;
-    }
-    setSelectedOverrideId(id);
-  };
-
-  const handleCreateOverridePreset = async () => {
-    try {
-      const newId = await createGeneralOverridePreset();
-      setSelectedOverrideId(newId);
-    } catch (creationError) {
-      console.error("Failed to create override preset", creationError);
-    }
-  };
-
-  const handleDuplicateOverridePreset = async () => {
-    if (!selectedOverrideId) {
-      return;
-    }
-    try {
-      const duplicatedId = await duplicateGeneralOverridePreset(selectedOverrideId);
-      if (duplicatedId) {
-        setSelectedOverrideId(duplicatedId);
-      }
-    } catch (duplicateError) {
-      console.error("Failed to duplicate override preset", duplicateError);
-    }
-  };
-
-  const handleRequestDeleteOverride = () => {
-    if (!selectedOverrideId) {
-      return;
-    }
-    setShowDeleteOverrideDialog(true);
-  };
-
-  const confirmDeleteOverride = async () => {
-    if (!selectedOverrideId) {
-      return;
-    }
-    setIsDeletingOverride(true);
-    try {
-      await deleteGeneralOverridePreset(selectedOverrideId);
-      setShowDeleteOverrideDialog(false);
-      setSelectedOverrideId(null);
-    } catch (deleteError) {
-      console.error("Failed to delete override preset", deleteError);
-    } finally {
-      setIsDeletingOverride(false);
-    }
-  };
-
   useEffect(() => {
     if (!uploadSource) {
       setExtractionNotes(null);
@@ -983,6 +871,16 @@ export const NewTourPage = () => {
             {imagePreview && (
               <div className="image-preview">
                 <img src={imagePreview} alt={`Xem trước ${uploadSource?.name ?? "tệp đã tải"}`} />
+              </div>
+            )}
+            {generalOverridesLoading && (
+              <div className="info-banner">
+                <FiRefreshCw className="spin" /> Đang tải gợi ý thông tin chung...
+              </div>
+            )}
+            {generalOverridesError && (
+              <div className="error-banner">
+                <FiAlertTriangle /> Không thể tải gợi ý thông tin chung. Vui lòng thử lại sau.
               </div>
             )}
             <GeminiSuggestionsGrid
@@ -1625,21 +1523,6 @@ export const NewTourPage = () => {
         onClose={() => setShowPromptConfirmation(false)}
         onConfirm={executeExtraction}
         isProcessing={processing}
-      />
-      <ConfirmationDialog
-        isOpen={showDeleteOverrideDialog}
-        onClose={() => {
-          if (!isDeletingOverride) {
-            setShowDeleteOverrideDialog(false);
-          }
-        }}
-        onConfirm={confirmDeleteOverride}
-        title="Xóa gợi ý thông tin chung"
-        message="Bạn có chắc chắn muốn xóa gợi ý này? Thao tác không thể hoàn tác."
-        confirmText="Xóa"
-        cancelText="Hủy"
-        variant="danger"
-        isLoading={isDeletingOverride}
       />
     </div>
   );

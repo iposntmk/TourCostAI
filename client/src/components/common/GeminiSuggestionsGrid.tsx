@@ -22,8 +22,10 @@ interface GeminiSuggestionsGridProps {
   };
 }
 
+type FieldKey = Extract<keyof ExtractionGeneralInfo, string>;
+
 interface FieldDefinition {
-  key: keyof ExtractionGeneralInfo | string;
+  key: FieldKey;
   label: string;
   description: string;
   type: "text" | "number" | "date" | "select";
@@ -33,7 +35,7 @@ interface FieldDefinition {
 }
 
 // Predefined field templates
-const fieldTemplates = {
+const fieldTemplates: Record<string, FieldDefinition[]> = {
   flight: [
     { key: "flightNumber", label: "Số Chuyến Bay", description: "Số hiệu chuyến bay của hãng hàng không", type: "text" as const, optional: true, isCustom: true },
     { key: "airline", label: "Hãng Bay", description: "Tên hãng hàng không", type: "text" as const, optional: true, isCustom: true },
@@ -299,25 +301,28 @@ export const GeminiSuggestionsGrid = ({
   }, [errorMessage]);
 
   const handleAddField = () => {
-    if (!newField.key || !newField.label || !newField.description) {
+    const rawKey = typeof newField.key === "string" ? newField.key : String(newField.key ?? "");
+    if (!rawKey || !newField.label || !newField.description) {
       setErrorMessage("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
-    
+
     // Validate field key format
-    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(newField.key)) {
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(rawKey)) {
       setErrorMessage("Key phải bắt đầu bằng chữ cái và chỉ chứa chữ, số, hoặc dấu gạch dưới");
       return;
     }
-    
+
     // Check if field key already exists
-    if (fieldDefinitions.some(f => f.key === newField.key)) {
+    if (fieldDefinitions.some(f => f.key === rawKey)) {
       setErrorMessage("Trường với key này đã tồn tại!");
       return;
     }
 
+    const sanitizedKey = rawKey.trim();
+
     const fieldToAdd: FieldDefinition = {
-      key: newField.key,
+      key: sanitizedKey,
       label: newField.label,
       description: newField.description,
       type: newField.type as "text" | "number" | "date" | "select",
@@ -327,7 +332,7 @@ export const GeminiSuggestionsGrid = ({
 
     // Persist to Firestore
     const payload: GeminiGeneralFieldInput = {
-      key: String(fieldToAdd.key).trim(),
+      key: sanitizedKey,
       label: fieldToAdd.label,
       description: fieldToAdd.description,
       type: fieldToAdd.type,
@@ -399,7 +404,7 @@ export const GeminiSuggestionsGrid = ({
 
   const handleApplyTemplate = (templateName: keyof typeof fieldTemplates) => {
     const template = fieldTemplates[templateName];
-    const existingKeys = new Set(fieldDefinitions.map(f => f.key));
+    const existingKeys = new Set<string>(fieldDefinitions.map(f => f.key));
     const newFields = template.filter(f => !existingKeys.has(f.key));
     
     if (newFields.length === 0) {
@@ -442,7 +447,7 @@ export const GeminiSuggestionsGrid = ({
         
         // Validate and add imported fields
         let addedCount = 0;
-        const existingKeys = new Set(fieldDefinitions.map(f => f.key));
+    const existingKeys = new Set<string>(fieldDefinitions.map(f => f.key));
         
         importedFields.forEach(field => {
           if (field.key && field.label && field.description && !existingKeys.has(field.key)) {

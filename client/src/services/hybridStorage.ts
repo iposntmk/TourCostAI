@@ -222,56 +222,6 @@ class HybridStorageService {
     }
   }
 
-  private async syncInBackground(): Promise<void> {
-    if (!this.isOnline) return;
-
-    try {
-      const localData = this.loadFromLocalStorage();
-      const localMetadata = this.loadSyncMetadata();
-
-      const docRef = doc(db, COLLECTIONS.MASTER_DATA, this.deviceId);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        if (localData) {
-          await this.saveToFirestore(localData);
-        }
-        return;
-      }
-
-      const payload = docSnap.data();
-      const { _metadata, ...masterData } = payload;
-      const cloudData = masterData as MasterData;
-      const cloudMetadata = (_metadata as SyncMetadata) ?? null;
-
-      if (localData) {
-        const localVersion = localMetadata?.version ?? 0;
-        const cloudVersion = cloudMetadata?.version ?? 0;
-
-        if (cloudVersion > localVersion) {
-          this.saveToLocalStorage(cloudData);
-          if (cloudMetadata) {
-            this.saveSyncMetadata(cloudMetadata);
-          }
-        } else if (localVersion > cloudVersion) {
-          await this.saveToFirestore(localData);
-        } else if (JSON.stringify(cloudData) !== JSON.stringify(localData)) {
-          this.saveToLocalStorage(cloudData);
-          if (cloudMetadata) {
-            this.saveSyncMetadata(cloudMetadata);
-          }
-        }
-      } else {
-        this.saveToLocalStorage(cloudData);
-        if (cloudMetadata) {
-          this.saveSyncMetadata(cloudMetadata);
-        }
-      }
-    } catch (error) {
-      console.warn("Background sync failed:", error);
-    }
-  }
-
   // Real-time sync
   startRealtimeSync(): void {
     if (!this.isOnline) return;
